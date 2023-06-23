@@ -265,3 +265,5 @@ pyrightconfig.json
 
 # Authentication
 auth.json
+
+populate.py
