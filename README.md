@@ -1,4 +1,4 @@
-<h1 align="center">TenebriOS</h1>
+<h1 align="center">TenebriOS Dashboard</h1>
 
 <p align="center">
   <img alt="Github top language" src="https://img.shields.io/github/languages/top/thomasbarrepitous/tenebrios_dashboard_proto?color=56BEB8">
@@ -38,7 +38,7 @@
 
 ## :dart: About ##
 
-This project is a prototype for a flour beetle farming Weather Station.
+This project is a prototype for a flour beetle farming Weather Station. It is fed through an API dedicated for the TenebriOS project which will also be available under the MIT License.
 
 ## :sparkles: Features ##
 
