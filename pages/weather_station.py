@@ -176,7 +176,7 @@ def datatable_raw(df):
 ##############
 
 
-layout = dbc.Row([
+layout = dbc.Container([
     dbc.Row(html.H1(children="Conditions salle d'élevage",
                     style={'textAlign': 'center'}),),
     # Current average
@@ -207,7 +207,7 @@ layout = dbc.Row([
         interval=10*1000,  # in milliseconds
         n_intervals=0
     )
-])
+], fluid=True)
 
 
 #################
