@@ -267,3 +267,4 @@ pyrightconfig.json
 auth.json
 
 populate.py
+populate_tracability.py

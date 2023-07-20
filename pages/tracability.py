@@ -1,5 +1,5 @@
 import dash
-from dash import callback, html, dcc, Output, Input, dash_table
+from dash import callback, html, dcc, Output, Input, State, MATCH, ALL
 import plotly.express as px
 import pandas as pd
 import dash_bootstrap_components as dbc
@@ -8,6 +8,14 @@ import requests
 import json
 from datetime import date
 
+
+API_URL = f'http://127.0.0.1:8000/api/tracability/'
+
+with open('auth.json') as auth_file:
+    auth_json = json.loads(auth_file.read())
+    auth = (auth_json["username"], auth_json["password"])
+
+
 dash.register_page(__name__)
 
 
@@ -15,8 +23,91 @@ dash.register_page(__name__)
 # Dashboard #
 #############
 
-def render_dashboard():
-    pass
+def column_card(column):
+    return dbc.Col(
+        dbc.Card(
+            [
+                dbc.CardHeader(html.H4(f"Colonne {column}",
+                                       className="card-title")),
+                dbc.CardBody(
+                    [
+                        html.H6(f"Dernière action : {None}",
+                                className="card-subtitle"),
+                        html.P(
+                            f"Date : {None}",
+                            className="card-text",
+                        ),
+                        dbc.Button("Voir détails", color="primary", id={
+                            "type": "button_modal", "index": column}, className="me-1", n_clicks=0),
+                        dbc.Modal(
+                            [
+                                dbc.ModalHeader(
+                                    dbc.ModalTitle(f"Colonne {column}")),
+                                dbc.ModalBody(
+                                    [
+                                        dbc.Row(
+                                            dbc.Col(html.P(f'Date de mise en culture :'))),
+                                        dbc.Row(
+                                            dbc.Col(html.P(f'Date de récolte :'))),
+                                        dbc.Row(
+                                            [
+                                                dbc.Col(
+                                                    html.P(f'Poids récolte totale du lot :')),
+                                                dbc.Col(
+                                                    html.P(f'Poids moyen par bac :'))
+                                            ]
+                                        ),
+                                        dbc.Row(
+                                            [
+                                                dbc.Col(
+                                                    html.P(f'Historique :'))
+                                            ]
+                                        )
+                                    ]
+                                ),
+                            ],
+                            id={"type": "modal_column", "index": column},
+                            size="lg",
+                            is_open=False,
+                        ),
+                    ]
+                ),
+                # dbc.CardFooter("Prochaine action :")
+            ],
+            style={"width": "18rem"}
+        )
+    )
+
+
+def column_cards():
+    columns = json.loads(requests.get(
+        f'{API_URL}get_columns/', auth=auth).text)
+    cards = dbc.Row(
+        [
+            column_card(column['column'])
+            for column in columns
+        ]
+    )
+    return cards
+
+
+en_cours_title = dbc.Row(
+    [
+        html.Hr(),
+        dbc.Col(
+            html.H2('En Cours'),
+            width={"size": 6, "offset": 3},
+            className='text-center'
+        ),
+        html.Hr()
+    ]
+)
+
+
+dashboard = [
+    en_cours_title,
+    column_cards()
+]
 
 
 #########
@@ -273,7 +364,7 @@ def display_anomalie_comment(value):
           Input('tabs-tracability', 'value'))
 def render_content(tab):
     if tab == 'dashboard-tab':
-        return render_dashboard()
+        return dashboard
     elif tab == 'input-tab':
         return [header_input, dbc.Form(id="form-input-module")]
 
@@ -289,3 +380,22 @@ def render_action_form(action):
         return form_input_tamise
     elif action == 'recolte':
         return form_input_recolte
+
+#################
+# Column Modals #
+#################
+
+
+def toggle_modal(n1, is_open):
+    if n1:
+        return not is_open
+    return is_open
+
+
+@callback(
+    Output({"type": "modal_column", "index": MATCH}, "is_open"),
+    Input({"type": "button_modal", "index": MATCH}, "n_clicks"),
+    State({"type": "modal_column", "index": MATCH}, "is_open"),
+)
+def toggle_modal_callback(n1, is_open):
+    return toggle_modal(n1, is_open)
