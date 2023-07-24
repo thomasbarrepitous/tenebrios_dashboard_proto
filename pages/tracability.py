@@ -6,7 +6,7 @@ import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 import requests
 import json
-from datetime import date
+from datetime import date, datetime
 
 
 API_URL = f'http://127.0.0.1:8000/api/tracability/'
@@ -22,6 +22,76 @@ dash.register_page(__name__)
 #############
 # Dashboard #
 #############
+
+def modal_body(column):
+    # Ctype 11 = MiseEnCulture
+    # Filtering by Ctype is a current restriction
+    # imposed by the design of the API.
+    # For more informations : https://github.com/denisorehovsky/django-rest-polymorphic
+    r = requests.get(
+        f'{API_URL}?column={column}', auth=auth).text
+    df = pd.read_json(r)
+    df_column = df.query(f'column == "{column}"')
+    date_mec = df_column.query(
+        'resourcetype == "MiseEnCulture"')['date'][0]
+    df_column = df_column[(df['date'] > date_mec.to_pydatetime())]
+    last_action = df_column.iloc[-1]
+    # Infere the inputs
+    date_recolte = 'Élevage en cours'
+    harvested_qty = 'Élevage en cours'
+    if last_action['resourcetype'] == "Recolte":
+        date_recolte = last_action['date']
+        harvested_qty = last_action['harvested_quantity']
+    return dbc.ModalBody(
+        [
+            dbc.Row(
+                dbc.Col(html.P(f'Date de mise en culture : {date_mec.strftime("%B %d, %Y")}'))),
+            dbc.Row(
+                dbc.Col(html.P(f'Date de récolte : {date_recolte.strftime("%B %d, %Y")}'))),
+            dbc.Row(
+                [
+                    dbc.Col(
+                        html.P(f'Poids récolte totale du lot :{harvested_qty}')),
+                    dbc.Col(
+                        html.P(f'Poids moyen par bac : {None}'))
+                ]
+            ),
+            dbc.Row(
+                [
+                    dbc.Col(
+                        html.H3(f'Historique :'), class_name='text-center'),
+                    dbc.Col(
+                        dbc.ListGroup(
+                            [
+                                dbc.ListGroupItem(
+                                    [
+                                        html.Div(
+                                            [
+                                                html.H5(
+                                                    "This item has a heading", className="mb-1"),
+                                            ],
+                                        ),
+                                        html.Div(
+                                            [
+                                                html.P(f'{key}:{detail}',
+                                                       className="mb-1")
+                                                for key, detail in action if detail is not None
+                                            ],
+                                        )
+                                        # html.Small(
+                                        #     "Plus some small print.", className="text-muted"),
+                                    ]
+                                )
+                                for action in df_column.iterrows()
+                            ]
+                        ),
+                        width='12'
+                    )
+                ]
+            )
+        ]
+    )
+
 
 def column_card(column):
     return dbc.Col(
@@ -43,36 +113,14 @@ def column_card(column):
                             [
                                 dbc.ModalHeader(
                                     dbc.ModalTitle(f"Colonne {column}")),
-                                dbc.ModalBody(
-                                    [
-                                        dbc.Row(
-                                            dbc.Col(html.P(f'Date de mise en culture :'))),
-                                        dbc.Row(
-                                            dbc.Col(html.P(f'Date de récolte :'))),
-                                        dbc.Row(
-                                            [
-                                                dbc.Col(
-                                                    html.P(f'Poids récolte totale du lot :')),
-                                                dbc.Col(
-                                                    html.P(f'Poids moyen par bac :'))
-                                            ]
-                                        ),
-                                        dbc.Row(
-                                            [
-                                                dbc.Col(
-                                                    html.P(f'Historique :'))
-                                            ]
-                                        )
-                                    ]
-                                ),
+                                modal_body(column),
                             ],
                             id={"type": "modal_column", "index": column},
                             size="lg",
                             is_open=False,
-                        ),
+                        )
                     ]
-                ),
-                # dbc.CardFooter("Prochaine action :")
+                )
             ],
             style={"width": "18rem"}
         )
