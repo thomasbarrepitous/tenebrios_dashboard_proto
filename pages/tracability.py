@@ -1,13 +1,13 @@
 import dash
 from dash import callback, html, dcc, Output, Input, State, MATCH, ALL
-import plotly.express as px
 import pandas as pd
 import dash_bootstrap_components as dbc
-import plotly.graph_objects as go
+import dash_mantine_components as dmc
 import requests
 import json
-from datetime import date, datetime
-
+from datetime import date
+import numpy as np
+import re
 
 API_URL = f'http://127.0.0.1:8000/api/tracability/'
 
@@ -22,19 +22,70 @@ dash.register_page(__name__)
 #############
 # Dashboard #
 #############
+def add_space_before_caps(str):
+    return re.sub('([A-Z])', r' \1', str)
 
-def modal_body(column):
-    # Ctype 11 = MiseEnCulture
+
+def latest_breeding_listgroup(df_column):
+    # Change empty strings to pd.NaN
+    pd.options.mode.use_inf_as_na = True
+    return dbc.ListGroup(
+        [
+            dbc.ListGroupItem(
+                [
+                    html.Div(
+                        html.H5(dmc.Highlight(
+                            f"{add_space_before_caps(action[1]['resourcetype'])}", highlight=add_space_before_caps(action[1]['resourcetype']), className="mb-1 text-center text-nowrap bd-highlight"))
+                    ),
+                    dbc.Row(
+                        [
+                            dbc.Col(
+                                html.P(
+                                    f'{key}: {value.strftime("%B %d, %Y") if type(value) == pd.Timestamp else value}'),
+                                width=6,
+                                class_name='text-center'
+                            )
+                            for key, value in action[1].items() if not pd.isna(value)
+                        ],
+                    )
+                ]
+            )
+            for action in df_column[::-1].iterrows()
+        ]
+    )
+
+
+def df_columns_type_fix(df_column):
+    df_column['anomaly'] = df_column['anomaly'].astype('boolean')
+    df_column['is_imw100_weighted'] = df_column['is_imw100_weighted'].astype(
+        'boolean')
+    df_column['son_arrival_date'] = pd.to_datetime(
+        df_column['son_arrival_date'])
+    df_column['marc_arrival_date'] = pd.to_datetime(
+        df_column['marc_arrival_date'])
+    df_column = df_column.replace('', np.nan)
+    return df_column
+
+
+def fetch_df_column(column):
     # Filtering by Ctype is a current restriction
-    # imposed by the design of the API.
+    # imposed by the polymorphic design some models in the API.
     # For more informations : https://github.com/denisorehovsky/django-rest-polymorphic
     r = requests.get(
         f'{API_URL}?column={column}', auth=auth).text
     df = pd.read_json(r)
+    # Filter by the current column
     df_column = df.query(f'column == "{column}"')
+    # Only keep the latest breeding
     date_mec = df_column.query(
         'resourcetype == "MiseEnCulture"')['date'][0]
-    df_column = df_column[(df['date'] > date_mec.to_pydatetime())]
+    df_column = df_column[(df['date'] >= date_mec.to_pydatetime())]
+    # Convert to right types
+    df_column = df_columns_type_fix(df_column)
+    return df_column
+
+
+def modal_body(df_column):
     last_action = df_column.iloc[-1]
     # Infere the inputs
     date_recolte = 'Élevage en cours'
@@ -42,6 +93,7 @@ def modal_body(column):
     if last_action['resourcetype'] == "Recolte":
         date_recolte = last_action['date']
         harvested_qty = last_action['harvested_quantity']
+    date_mec = df_column.iloc[0]['date']
     return dbc.ModalBody(
         [
             dbc.Row(
@@ -61,30 +113,7 @@ def modal_body(column):
                     dbc.Col(
                         html.H3(f'Historique :'), class_name='text-center'),
                     dbc.Col(
-                        dbc.ListGroup(
-                            [
-                                dbc.ListGroupItem(
-                                    [
-                                        html.Div(
-                                            [
-                                                html.H5(
-                                                    "This item has a heading", className="mb-1"),
-                                            ],
-                                        ),
-                                        html.Div(
-                                            [
-                                                html.P(f'{key}:{detail}',
-                                                       className="mb-1")
-                                                for key, detail in action if detail is not None
-                                            ],
-                                        )
-                                        # html.Small(
-                                        #     "Plus some small print.", className="text-muted"),
-                                    ]
-                                )
-                                for action in df_column.iterrows()
-                            ]
-                        ),
+                        latest_breeding_listgroup(df_column),
                         width='12'
                     )
                 ]
@@ -94,17 +123,18 @@ def modal_body(column):
 
 
 def column_card(column):
+    df_column = fetch_df_column(column)
     return dbc.Col(
         dbc.Card(
             [
                 dbc.CardHeader(html.H4(f"Colonne {column}",
-                                       className="card-title")),
+                                       className="card-title text-center"),),
                 dbc.CardBody(
                     [
-                        html.H6(f"Dernière action : {None}",
+                        html.H6(f"Dernière action : {add_space_before_caps(df_column.iloc[-1]['resourcetype'])}",
                                 className="card-subtitle"),
                         html.P(
-                            f"Date : {None}",
+                            f"Date : {df_column.iloc[-1]['date'].strftime('%B %d, %Y')}",
                             className="card-text",
                         ),
                         dbc.Button("Voir détails", color="primary", id={
@@ -113,7 +143,7 @@ def column_card(column):
                             [
                                 dbc.ModalHeader(
                                     dbc.ModalTitle(f"Colonne {column}")),
-                                modal_body(column),
+                                modal_body(df_column),
                             ],
                             id={"type": "modal_column", "index": column},
                             size="lg",
