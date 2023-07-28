@@ -19,9 +19,10 @@ with open('auth.json') as auth_file:
 dash.register_page(__name__)
 
 
-#############
-# Dashboard #
-#############
+######################
+# En Cours Dashboard #
+######################
+
 def add_space_before_caps(str):
     return re.sub('([A-Z])', r' \1', str)
 
@@ -168,23 +169,40 @@ def column_cards():
     )
     return cards
 
+########################
+# Historical breedings #
+########################
 
-en_cours_title = dbc.Row(
-    [
-        html.Hr(),
-        dbc.Col(
-            html.H2('En Cours'),
-            width={"size": 6, "offset": 3},
-            className='text-center'
-        ),
-        html.Hr()
-    ]
-)
+
+def historical_breedings():
+    # columns = json.loads(requests.get(
+    #     f'{API_URL}get_columns/', auth=auth).text)
+    return dbc.Row(
+        [
+            
+        ]
+    )
+
+
+def centered_title(title: str):
+    return dbc.Row(
+        [
+            html.Hr(),
+            dbc.Col(
+                html.H2(f'{title}'),
+                width={"size": 6, "offset": 3},
+                className='text-center'
+            ),
+            html.Hr()
+        ]
+    )
 
 
 dashboard = [
-    en_cours_title,
-    column_cards()
+    centered_title('En Cours'),
+    column_cards(),
+    centered_title('Historique élevage'),
+    historical_breedings()
 ]
 
 
@@ -393,7 +411,6 @@ form_input_recolte = [
 # Layout #
 ##########
 
-
 layout = dbc.Container(
     [
         dbc.Row(html.H1('Tracability Dashboard',
@@ -459,10 +476,10 @@ def render_action_form(action):
     elif action == 'recolte':
         return form_input_recolte
 
+
 #################
 # Column Modals #
 #################
-
 
 def toggle_modal(n1, is_open):
     if n1:
