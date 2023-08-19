@@ -170,34 +170,29 @@ def display_column_cards():
     return cards
 
 
-########################
-# Historical breedings #
-########################
+#################
+# Cycle history #
+#################
 
-def breeding_table(df: pd.DataFrame, title: str):
+def display_cycle(recolte_nb: str):
+    harvest_cycle = json.loads(requests.get(
+        f'{API_URL}/recolte-nb/{recolte_nb}/cycle', auth=auth).text)
     return dbc.Col(
-        [
-            html.H2(title),
-            dbc.Table.from_dataframe(
-                df, striped=True, bordered=True, hover=True)
-        ],
+        html.P(dmc.Highlight(f'{harvest_cycle[0]["recolte_nb"]} : {harvest_cycle[0]["date"]} -> {harvest_cycle[1]["date"]}', highlight=harvest_cycle[0]["recolte_nb"], highlightColor='primary', className="mb-1 text-center text-nowrap bd-highlight")),
+        width={"size": 6, "offset": 3},
         className='text-center'
     )
 
 
-def display_historical_breedings():
-    historic_breedings = json.loads(requests.get(
-        f'{API_URL}/historic-breedings', auth=auth).text)
-    if historic_breedings%2 == 0:
-        start_breeding_df, end_breeding_df = pd.DataFrame(
-            historic_breedings[0::2]), pd.DataFrame(historic_breedings[1::2])
-    breedings_lists = dbc.Row(
+def display_historical_cycle():
+    historical_harvests = json.loads(requests.get(
+        f'{API_URL}/recolte-nb', auth=auth).text)
+    cycles_display = dbc.Row(
         [
-            breeding_table(start_breeding_df, 'Mise en culture'),
-            breeding_table(end_breeding_df, 'Recolte')
+            display_cycle(harvest['recolte_nb']) for harvest in historical_harvests
         ]
     )
-    return breedings_lists
+    return cycles_display
 
 
 ########################
@@ -206,7 +201,7 @@ def display_historical_breedings():
 
 def display_raw_data():
     historic_breedings = json.loads(requests.get(
-        f'{API_URL}/historic-breedings', auth=auth).text)
+        f'{API_URL}', auth=auth).text)
     return dash_table.DataTable(historic_breedings, css=[{
         'selector': '.dash-spreadsheet td div',
         'rule': '''
@@ -243,7 +238,7 @@ dashboard = [
     display_centered_title('En Cours'),
     display_column_cards(),
     display_centered_title('Historique élevage'),
-    display_historical_breedings(),
+    display_historical_cycle(),
     display_centered_title('Données brutes'),
     display_raw_data()
 ]

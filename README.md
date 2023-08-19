@@ -40,6 +40,7 @@
 
 This project is a prototype for a flour beetle farming Weather Station. It is fed through an API dedicated for the TenebriOS project which will also be available under the MIT License.
 
+
 ## :sparkles: Features ##
 
 :heavy_check_mark: Supports CO2, Temperature, Humidity;\
@@ -76,6 +77,13 @@ $ docker run -p 8080:80 tenebrios_dashboard
 
 # The server will initialize in the <http://localhost:8080>
 ```
+
+## :exclamation: Dev Note ##
+
+Currently this prototype has no aim for production, and is rather a first shot for a future
+working product. Thus inconsistencies in methods, variables or URIs might have happened.
+
+You will also note the lack of documentation and comments in this repo. There will be none as the only goal of this project is a minimum viable product to clarify business requirements and build a roadmap.
 
 ## :memo: License ##
 
