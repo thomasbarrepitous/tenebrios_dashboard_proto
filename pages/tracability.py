@@ -1,5 +1,5 @@
 import dash
-from dash import callback, html, dcc, Output, Input, State, MATCH, ALL
+from dash import callback, html, dcc, Output, Input, State, MATCH, ALL, dash_table
 import pandas as pd
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
@@ -9,7 +9,7 @@ from datetime import date
 import numpy as np
 import re
 
-API_URL = f'http://127.0.0.1:8000/api/tracability/'
+API_URL = f'http://127.0.0.1:8000/api/actions'
 
 with open('auth.json') as auth_file:
     auth_json = json.loads(auth_file.read())
@@ -158,9 +158,9 @@ def column_card(column):
     )
 
 
-def column_cards():
+def display_column_cards():
     columns = json.loads(requests.get(
-        f'{API_URL}get_columns/', auth=auth).text)
+        f'{API_URL}/columns', auth=auth).text)
     cards = dbc.Row(
         [
             column_card(column['column'])
@@ -169,22 +169,63 @@ def column_cards():
     )
     return cards
 
+
 ########################
 # Historical breedings #
 ########################
 
-
-def historical_breedings():
-    # columns = json.loads(requests.get(
-    #     f'{API_URL}get_columns/', auth=auth).text)
-    return dbc.Row(
+def breeding_table(df: pd.DataFrame, title: str):
+    return dbc.Col(
         [
-            
-        ]
+            html.H2(title),
+            dbc.Table.from_dataframe(
+                df, striped=True, bordered=True, hover=True)
+        ],
+        className='text-center'
     )
 
 
-def centered_title(title: str):
+def display_historical_breedings():
+    historic_breedings = json.loads(requests.get(
+        f'{API_URL}/historic-breedings', auth=auth).text)
+    if historic_breedings%2 == 0:
+        start_breeding_df, end_breeding_df = pd.DataFrame(
+            historic_breedings[0::2]), pd.DataFrame(historic_breedings[1::2])
+    breedings_lists = dbc.Row(
+        [
+            breeding_table(start_breeding_df, 'Mise en culture'),
+            breeding_table(end_breeding_df, 'Recolte')
+        ]
+    )
+    return breedings_lists
+
+
+########################
+# Historical breedings #
+########################
+
+def display_raw_data():
+    historic_breedings = json.loads(requests.get(
+        f'{API_URL}/historic-breedings', auth=auth).text)
+    return dash_table.DataTable(historic_breedings, css=[{
+        'selector': '.dash-spreadsheet td div',
+        'rule': '''
+                    line-height: 15px;
+                    max-height: 30px; min-height: 30px; height: 30px;
+                    display: block;
+                    overflow-y: hidden;
+
+                        '''
+    }],
+        style_data={
+            'whiteSpace': 'normal',
+    },
+        page_current=0,
+        page_size=6,
+        page_action='native')
+
+
+def display_centered_title(title: str):
     return dbc.Row(
         [
             html.Hr(),
@@ -199,10 +240,12 @@ def centered_title(title: str):
 
 
 dashboard = [
-    centered_title('En Cours'),
-    column_cards(),
-    centered_title('Historique élevage'),
-    historical_breedings()
+    display_centered_title('En Cours'),
+    display_column_cards(),
+    display_centered_title('Historique élevage'),
+    display_historical_breedings(),
+    display_centered_title('Données brutes'),
+    display_raw_data()
 ]
 
 
