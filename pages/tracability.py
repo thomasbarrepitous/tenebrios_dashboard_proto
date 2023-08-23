@@ -23,6 +23,26 @@ dash.register_page(__name__)
 # En Cours Dashboard #
 ######################
 
+def parse_form_index_to_request(form_index):
+    if form_index == 'Marc-bac':
+        return 'given_quantity_bac'
+    elif form_index == 'Marc-total':
+        return 'given_quantity'
+    elif form_index == 'Son-bac':
+        return 'given_quantity_bac'
+    elif form_index == 'Son-total':
+        return 'given_quantity'
+    elif form_index == 'Datearrivagemarc':
+        return 'marc_arrival_date'
+    elif form_index == 'Datearrivageson':
+        return 'son_arrival_date'
+    elif form_index == 'Qtetamisée':
+        return 'sieved_quantity'
+    elif form_index == 'Qterécoltée':
+        return 'harvested_quantity'
+    return form_index
+
+
 def add_space_before_caps(str):
     return re.sub('([A-Z])', r' \1', str)
 
@@ -178,7 +198,8 @@ def display_cycle(recolte_nb: str):
     harvest_cycle = json.loads(requests.get(
         f'{API_URL}/recolte-nb/{recolte_nb}/cycle', auth=auth).text)
     return dbc.Col(
-        html.P(dmc.Highlight(f'{harvest_cycle[0]["recolte_nb"]} : {harvest_cycle[0]["date"]} -> {harvest_cycle[1]["date"]}', highlight=harvest_cycle[0]["recolte_nb"], highlightColor='primary', className="mb-1 text-center text-nowrap bd-highlight")),
+        html.P(dmc.Highlight(f'{harvest_cycle[0]["recolte_nb"]} : {harvest_cycle[0]["date"]} -> {harvest_cycle[1]["date"]}',
+               highlight=harvest_cycle[0]["recolte_nb"], highlightColor='primary', className="mb-1 text-center text-nowrap bd-highlight")),
         width={"size": 6, "offset": 3},
         className='text-center'
     )
@@ -269,7 +290,7 @@ def qte_donnee_duo_form(qte_name: str):
             dbc.Col(
                 dbc.InputGroup(
                     [
-                        dbc.Input(placeholder="Quantité", type="number"),
+                        dbc.Input(placeholder="Quantité", type="number", id={'type': 'input-data', 'index': f"{qte_name.replace(' ', '')}-bac"}),
                         dbc.InputGroupText("G"),
                     ]
                 ),
@@ -278,7 +299,7 @@ def qte_donnee_duo_form(qte_name: str):
             dbc.Col(
                 dbc.InputGroup(
                     [
-                        dbc.Input(placeholder="Quantité", type="number"),
+                        dbc.Input(placeholder="Quantité", type="number", id={'type': 'input-data', 'index': f"{qte_name.replace(' ', '')}-total"}),
                         dbc.InputGroupText("KG"),
                     ]
                 ),
@@ -295,7 +316,8 @@ def qte_donnee_form(qte_name: str):
             dbc.Col(
                 dbc.InputGroup(
                     [
-                        dbc.Input(placeholder="Quantité", type="number"),
+                        dbc.Input(placeholder="Quantité", type="number", id={
+                                  'type': 'input-data', 'index': f"{qte_name.replace(' ', '')}"}),
                         dbc.InputGroupText("KG"),
                     ]
                 ),
@@ -315,6 +337,8 @@ def date_picker_form(title: str):
                     # max_date_allowed=date(2017, 9, 19),
                     # initial_visible_month=date(2017, 8, 5),
                     date=date.today(),
+                    id={'type': 'input-data',
+                        'index': f"{title.replace(' ', '')}"},
                 )
             ),
         ],
@@ -330,14 +354,16 @@ header_input = dbc.Row([
             [
                 dbc.InputGroupText("Action"),
                 dbc.Select(
-                    id="select-actions-input",
+                    id={'type': 'input-data', 'index': "resourcetype"},
                     options=[
-                        {"label": "Nourrisage Humide", "value": "marc"},
-                        {"label": "Nourrisage Son", "value": "son"},
-                        {"label": "Tamisage", "value": "tamise"},
-                        {"label": "Récolte", "value": "recolte"},
+                        {"label": "Mise en culture", "value": "MiseEnCulture"},
+                        {"label": "Nourrisage Humide",
+                            "value": "NourrisageHumide"},
+                        {"label": "Nourrisage Son", "value": "NourrisageSon"},
+                        {"label": "Tamisage", "value": "Tamisage"},
+                        {"label": "Récolte", "value": "Recolte"},
                     ],
-                    value="marc"
+                    value="NourrisageHumide"
                 )
             ]
         )
@@ -350,7 +376,24 @@ column_form = dbc.Row(
         dbc.Label("Colonne", width="auto"),
         dbc.Col(
             dbc.Input(
-                type="number", placeholder="Entrer colonne"
+                id={'type': 'input-data', 'index': "column"},
+                type="string",
+                placeholder="Entrer colonne",
+            ),
+        ),
+    ],
+    className="mb-3",
+)
+
+
+recolte_nb_form = dbc.Row(
+    [
+        dbc.Label("Recolte_nb", width="auto"),
+        dbc.Col(
+            dbc.Input(
+                id={'type': 'input-data', 'index': "recolte_nb"},
+                type="string",
+                placeholder="Entrer recolte number",
             ),
         ),
     ],
@@ -363,7 +406,7 @@ anomalie_marc_form = dbc.Row(
         dbc.Label("Anomalie", width="auto"),
         dbc.Col(
             dbc.RadioItems(
-                id="anomalie-radios",
+                id={'type': 'input-data', 'index': "anomaly"},
                 className="btn-group",
                 inputClassName="btn-check",
                 labelClassName="btn btn-outline-primary",
@@ -389,7 +432,8 @@ pesage_marc_form = dbc.Row(
             "Pesage IMW100 (Individual Mass Weight pour 100 larves)", width="auto"),
         dbc.Col(
             dbc.RadioItems(
-                id="pesage-radios",
+                name='form-input',
+                id={'type': 'input-data', 'index': "is_imw100_weighted"},
                 className="btn-group",
                 inputClassName="btn-check",
                 labelClassName="btn btn-outline-primary",
@@ -409,14 +453,26 @@ pesage_marc_form = dbc.Row(
 )
 
 
+send_form_button = dbc.Row(
+    dbc.Button("Confirmer", id='submit-button', n_clicks=0,
+               type='submit', size="lg", className="me-md-2"),
+)
+
+
+clear_form_button = dbc.Row(
+    dbc.Button("Effacer", type='clear', size="lg", className="me-md-2"),
+)
+
+
 form_input_marc = [
     title_form("Marc de pomme"),
     column_form,
     date_picker_form("Date"),
     qte_donnee_duo_form("Marc"),
-    date_picker_form("Date arrivage"),
+    date_picker_form("Date arrivage marc"),
     anomalie_marc_form,
-    pesage_marc_form
+    pesage_marc_form,
+    send_form_button
 ]
 
 
@@ -425,7 +481,8 @@ form_input_son = [
     column_form,
     date_picker_form("Date"),
     qte_donnee_duo_form("Son"),
-    date_picker_form("Date arrivage"),
+    date_picker_form("Date arrivage son"),
+    send_form_button
 ]
 
 
@@ -434,6 +491,7 @@ form_input_tamise = [
     column_form,
     date_picker_form("Date"),
     qte_donnee_form("Qte tamisée"),
+    send_form_button
 ]
 
 
@@ -442,8 +500,17 @@ form_input_recolte = [
     column_form,
     date_picker_form("Date"),
     qte_donnee_form("Qte récoltée"),
+    send_form_button
 ]
 
+
+form_input_mec = [
+    title_form("Mise en culture"),
+    column_form,
+    recolte_nb_form,
+    date_picker_form("Date"),
+    send_form_button
+]
 
 ##########
 # Layout #
@@ -464,7 +531,8 @@ layout = dbc.Container(
 
             )
         ),
-        dbc.Row(html.Div(id='tabs-tracability-content'))
+        dbc.Row(html.Div(id='tabs-tracability-content')),
+        html.Div(id='output')
     ],
     fluid=True)
 
@@ -473,22 +541,44 @@ layout = dbc.Container(
 # Callback #
 ############
 
-@callback(Output("pesage-radios-output", "children"), [Input("pesage-radios", "value")])
+
+@callback(
+    Output('output', 'children'),
+    Input('submit-button', 'n_clicks'),
+    State({'type': 'input-data', 'index': ALL}, 'id'),
+    State({'type': 'input-data', 'index': ALL}, 'value')
+)
+def send_post_request(n_clicks, input_ids, input_values):
+    #     response = requests.post(url, data=data)
+    #     if response.status_code == 200:
+    #         return f"POST request successful. Response: {response.text}"
+    #     else:
+    #         return f"POST request failed. Status Code: {response.status_code}
+    if n_clicks:
+        post_data: dict = {}
+        for id, values in zip(input_ids, input_values):
+            post_data[parse_form_index_to_request(id['index'])] = values
+            # post_data[id['index']] = values
+        print(post_data)
+    return ""
+
+
+@callback(Output("pesage-radios-output", "children"), [Input({'type': 'input-data', 'index': "is_imw100_weighted"}, "value")])
 def display_pesage_comment(value):
     if value:
         return [
             dbc.Input(
-                type="text", placeholder="Commentaire ..."
+                type="text", placeholder="Commentaire ...", id={'type': 'input-data', 'index': "imw100_weight"}
             ),
         ]
 
 
-@callback(Output("anomalie-radios-output", "children"), [Input("anomalie-radios", "value")])
+@callback(Output("anomalie-radios-output", "children"), [Input({'type': 'input-data', 'index': "anomaly"}, "value")])
 def display_anomalie_comment(value):
     if value:
         return [
             dbc.Input(
-                type="text", placeholder="Commentaire ..."
+                type="text", placeholder="Commentaire ...", id={'type': 'input-data', 'index': "anomaly_comment"}
             ),
         ]
 
@@ -503,16 +593,18 @@ def render_content(tab):
 
 
 @callback(Output('form-input-module', 'children'),
-          Input('select-actions-input', 'value'))
+          Input({'type': 'input-data', 'index': "resourcetype"}, 'value'))
 def render_action_form(action):
-    if action == 'marc':
+    if action == 'NourrisageHumide':
         return form_input_marc
-    elif action == 'son':
+    elif action == 'NourrisageSon':
         return form_input_son
-    elif action == 'tamise':
+    elif action == 'Tamisage':
         return form_input_tamise
-    elif action == 'recolte':
+    elif action == 'Recolte':
         return form_input_recolte
+    elif action == 'MiseEnCulture':
+        return form_input_mec
 
 
 #################
