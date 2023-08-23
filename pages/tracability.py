@@ -32,9 +32,9 @@ def parse_form_index_to_request(form_index):
         return 'given_quantity_bac'
     elif form_index == 'Son-total':
         return 'given_quantity'
-    elif form_index == 'Datearrivagemarc':
+    elif form_index == 'datearrivagemarc':
         return 'marc_arrival_date'
-    elif form_index == 'Datearrivageson':
+    elif form_index == 'datearrivageson':
         return 'son_arrival_date'
     elif form_index == 'Qtetamisée':
         return 'sieved_quantity'
@@ -337,8 +337,8 @@ def date_picker_form(title: str):
                     # max_date_allowed=date(2017, 9, 19),
                     # initial_visible_month=date(2017, 8, 5),
                     date=date.today(),
-                    id={'type': 'input-data',
-                        'index': f"{title.replace(' ', '')}"},
+                    id={'type': 'date-data',
+                        'index': f"{title.replace(' ', '').lower()}"},
                 )
             ),
         ],
@@ -546,20 +546,24 @@ layout = dbc.Container(
     Output('output', 'children'),
     Input('submit-button', 'n_clicks'),
     State({'type': 'input-data', 'index': ALL}, 'id'),
-    State({'type': 'input-data', 'index': ALL}, 'value')
+    State({'type': 'input-data', 'index': ALL}, 'value'),
+    State({'type': 'date-data', 'index': ALL}, 'id'),
+    State({'type': 'date-data', 'index': ALL}, 'date')
 )
-def send_post_request(n_clicks, input_ids, input_values):
-    #     response = requests.post(url, data=data)
-    #     if response.status_code == 200:
-    #         return f"POST request successful. Response: {response.text}"
-    #     else:
-    #         return f"POST request failed. Status Code: {response.status_code}
+def send_post_request(n_clicks, input_ids, input_values, date_ids, date_values):
     if n_clicks:
         post_data: dict = {}
+        input_ids = date_ids + input_ids
+        input_values = date_values + input_values
         for id, values in zip(input_ids, input_values):
             post_data[parse_form_index_to_request(id['index'])] = values
-            # post_data[id['index']] = values
-        print(post_data)
+        # POST request
+        response = requests.post(API_URL, data=post_data, auth=auth)
+        if response.status_code == 200:
+            print(f"POST request successful. Response: {response.text}")
+        else:
+            print(f"POST request failed. Status Code: {response.text}")
+            print(post_data)
     return ""
 
 
