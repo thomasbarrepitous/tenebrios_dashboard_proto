@@ -8,6 +8,7 @@ import json
 from datetime import date
 import numpy as np
 import re
+import math
 
 API_URL = f'http://127.0.0.1:8000/api/actions'
 
@@ -17,6 +18,9 @@ with open('auth.json') as auth_file:
 
 
 dash.register_page(__name__)
+
+
+cycle_page_size = 5
 
 
 ######################
@@ -84,6 +88,8 @@ def df_columns_type_fix(df_column):
         df_column['son_arrival_date'])
     df_column['marc_arrival_date'] = pd.to_datetime(
         df_column['marc_arrival_date'])
+    df_column['date'] = pd.to_datetime(
+        df_column['date'])
     df_column = df_column.replace('', np.nan)
     return df_column
 
@@ -94,13 +100,14 @@ def fetch_df_column(column):
     # For more informations : https://github.com/denisorehovsky/django-rest-polymorphic
     r = requests.get(
         f'{API_URL}?column={column}', auth=auth).text
-    df = pd.read_json(r)
+    parsed_r = json.loads(r)
+    df = pd.DataFrame(parsed_r)
     # Filter by the current column
     df_column = df.query(f'column == "{column}"')
     # Only keep the latest breeding
     date_mec = df_column.query(
         'resourcetype == "MiseEnCulture"')['date'][0]
-    df_column = df_column[(df['date'] >= date_mec.to_pydatetime())]
+    df_column = df_column[(df['date'] >= date_mec)]
     # Convert to right types
     df_column = df_columns_type_fix(df_column)
     return df_column
@@ -109,7 +116,7 @@ def fetch_df_column(column):
 def modal_body(df_column):
     last_action = df_column.iloc[-1]
     # Infere the inputs
-    date_recolte = 'Élevage en cours'
+    date_recolte = None
     harvested_qty = 'Élevage en cours'
     if last_action['resourcetype'] == "Recolte":
         date_recolte = last_action['date']
@@ -120,7 +127,7 @@ def modal_body(df_column):
             dbc.Row(
                 dbc.Col(html.P(f'Date de mise en culture : {date_mec.strftime("%B %d, %Y")}'))),
             dbc.Row(
-                dbc.Col(html.P(f'Date de récolte : {date_recolte.strftime("%B %d, %Y")}'))),
+                dbc.Col(html.P(f'Date de récolte : {date_recolte.strftime("%B %d, %Y") or "Élevage en cours"}'))),
             dbc.Row(
                 [
                     dbc.Col(
@@ -193,6 +200,33 @@ def display_column_cards():
 #################
 # Cycle history #
 #################
+def filter_cycle():
+    columns = json.loads(requests.get(
+        f'{API_URL}/columns', auth=auth).text)
+    return dbc.Col(
+        [
+            dmc.MultiSelect(
+                label="Filtrer par colonne",
+                placeholder="Choisis une ou plusieurs colonne!",
+                id="framework-multi-select",
+                value=[],
+                data=[{"value": column['column'], "label": column['column']}
+                      for column in columns],
+                style={"width": 400, "marginBottom": 10},
+            ),
+            dmc.Text(id="multi-selected-value"),
+        ],
+        width={"size": 4, "offset": 4},
+    )
+
+
+def display_pagination_cycle(current_page: int, total_page_size: int):
+    return dbc.Col(
+        dmc.Pagination(total=total_page_size, boundaries=1,
+                       page=current_page, id='pagination-cycle'),
+        width={"size": 2, "offset": 5},
+    )
+
 
 def display_cycle(recolte_nb: str):
     harvest_cycle = json.loads(requests.get(
@@ -206,11 +240,20 @@ def display_cycle(recolte_nb: str):
 
 
 def display_historical_cycle():
-    historical_harvests = json.loads(requests.get(
-        f'{API_URL}/recolte-nb', auth=auth).text)
     cycles_display = dbc.Row(
         [
-            display_cycle(harvest['recolte_nb']) for harvest in historical_harvests
+            dbc.Row(
+                filter_cycle()
+            ),
+            dbc.Row(
+                id='display-cycle'
+            ),
+            dbc.Row(
+                [
+                    display_pagination_cycle(1, 1)
+                ],
+                id='pagination-div'
+            )
         ]
     )
     return cycles_display
@@ -290,7 +333,8 @@ def qte_donnee_duo_form(qte_name: str):
             dbc.Col(
                 dbc.InputGroup(
                     [
-                        dbc.Input(placeholder="Quantité", type="number", id={'type': 'input-data', 'index': f"{qte_name.replace(' ', '')}-bac"}),
+                        dbc.Input(placeholder="Quantité", type="number", id={
+                                  'type': 'input-data', 'index': f"{qte_name.replace(' ', '')}-bac"}),
                         dbc.InputGroupText("G"),
                     ]
                 ),
@@ -299,7 +343,8 @@ def qte_donnee_duo_form(qte_name: str):
             dbc.Col(
                 dbc.InputGroup(
                     [
-                        dbc.Input(placeholder="Quantité", type="number", id={'type': 'input-data', 'index': f"{qte_name.replace(' ', '')}-total"}),
+                        dbc.Input(placeholder="Quantité", type="number", id={
+                                  'type': 'input-data', 'index': f"{qte_name.replace(' ', '')}-total"}),
                         dbc.InputGroupText("KG"),
                     ]
                 ),
@@ -628,3 +673,18 @@ def toggle_modal(n1, is_open):
 )
 def toggle_modal_callback(n1, is_open):
     return toggle_modal(n1, is_open)
+
+
+@callback(
+    Output('display-cycle', "children"),
+    Output('pagination-div', 'children'),
+    Input('pagination-cycle', 'page'),
+    Input("framework-multi-select", "value")
+)
+def select_value(current_page, filters):
+    uri_filters = ''
+    if filters != []:
+        uri_filters = ''.join('column=' + filter + '&' for filter in filters)
+    r_uri = f'{API_URL}/recolte-nb?{uri_filters}&limit={cycle_page_size}&offset={(current_page-1)*cycle_page_size}'
+    historical_harvests = json.loads(requests.get(r_uri, auth=auth).text)
+    return [[display_cycle(harvest['recolte_nb']) for harvest in historical_harvests['results']], display_pagination_cycle(current_page, math.ceil(historical_harvests['count']/cycle_page_size))]
