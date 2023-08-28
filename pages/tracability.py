@@ -3,10 +3,10 @@ from dash import callback, html, dcc, Output, Input, State, MATCH, ALL, dash_tab
 import pandas as pd
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
-import requests
 import json
 from datetime import date
 import numpy as np
+import requests
 import re
 import math
 
@@ -20,12 +20,62 @@ with open('auth.json') as auth_file:
 dash.register_page(__name__)
 
 
-cycle_page_size = 5
+CYCLE_PAGE_SIZE = 5
 
+#############
+# API calls #
+#############
+
+
+def get_all_actions():
+    return json.loads(requests.get(
+        f'{API_URL}', auth=auth).text)
+
+
+def get_column_action(column: str):
+    return json.loads(requests.get(
+        f'{API_URL}?column={column}', auth=auth).text)
+
+
+def get_all_columns():
+    return json.loads(requests.get(
+        f'{API_URL}/columns', auth=auth).text)
+
+
+def get_harvest_cycle(recolte_nb: str):
+    return json.loads(requests.get(
+        f'{API_URL}/recolte-nb/{recolte_nb}/cycle', auth=auth).text)
+
+
+def get_all_recolte_paginated(filters, current_page):
+    r_uri = f'{API_URL}/recolte-nb?{filters}&limit={CYCLE_PAGE_SIZE}&offset={(current_page-1)*CYCLE_PAGE_SIZE}'
+    return json.loads(requests.get(r_uri, auth=auth).text)
+
+
+all_columns = get_all_columns()
+all_actions = get_all_actions()
+
+#########
+# Alert #
+#########
+
+
+def refresh_btn_toast(text: str):
+    return dbc.Toast(
+        text,
+        id="positioned-toast",
+        header="Notification",
+        is_open=False,
+        dismissable=True,
+        icon="primary",
+        style={"position": "fixed", "top": 66,
+               "right": 10, "width": 350, 'z-index': 1},
+    )
 
 ######################
 # En Cours Dashboard #
 ######################
+
 
 def parse_form_index_to_request(form_index):
     if form_index == 'Marc-bac':
@@ -95,13 +145,7 @@ def df_columns_type_fix(df_column):
 
 
 def fetch_df_column(column):
-    # Filtering by Ctype is a current restriction
-    # imposed by the polymorphic design some models in the API.
-    # For more informations : https://github.com/denisorehovsky/django-rest-polymorphic
-    r = requests.get(
-        f'{API_URL}?column={column}', auth=auth).text
-    parsed_r = json.loads(r)
-    df = pd.DataFrame(parsed_r)
+    df = pd.DataFrame(get_column_action(column))
     # Filter by the current column
     df_column = df.query(f'column == "{column}"')
     # Only keep the latest breeding
@@ -185,9 +229,7 @@ def column_card(column):
     )
 
 
-def display_column_cards():
-    columns = json.loads(requests.get(
-        f'{API_URL}/columns', auth=auth).text)
+def display_column_cards(columns):
     cards = dbc.Row(
         [
             column_card(column['column'])
@@ -200,9 +242,8 @@ def display_column_cards():
 #################
 # Cycle history #
 #################
-def filter_cycle():
-    columns = json.loads(requests.get(
-        f'{API_URL}/columns', auth=auth).text)
+
+def filter_cycle(columns):
     return dbc.Col(
         [
             dmc.MultiSelect(
@@ -229,8 +270,7 @@ def display_pagination_cycle(current_page: int, total_page_size: int):
 
 
 def display_cycle(recolte_nb: str):
-    harvest_cycle = json.loads(requests.get(
-        f'{API_URL}/recolte-nb/{recolte_nb}/cycle', auth=auth).text)
+    harvest_cycle = get_harvest_cycle(recolte_nb)
     return dbc.Col(
         html.P(dmc.Highlight(f'{harvest_cycle[0]["recolte_nb"]} : {harvest_cycle[0]["date"]} -> {harvest_cycle[1]["date"]}',
                highlight=harvest_cycle[0]["recolte_nb"], highlightColor='primary', className="mb-1 text-center text-nowrap bd-highlight")),
@@ -239,11 +279,11 @@ def display_cycle(recolte_nb: str):
     )
 
 
-def display_historical_cycle():
+def display_historical_cycle(columns):
     cycles_display = dbc.Row(
         [
             dbc.Row(
-                filter_cycle()
+                filter_cycle(columns)
             ),
             dbc.Row(
                 id='display-cycle'
@@ -263,10 +303,8 @@ def display_historical_cycle():
 # Historical breedings #
 ########################
 
-def display_raw_data():
-    historic_breedings = json.loads(requests.get(
-        f'{API_URL}', auth=auth).text)
-    return dash_table.DataTable(historic_breedings, css=[{
+def display_raw_data(actions):
+    return dash_table.DataTable(actions, css=[{
         'selector': '.dash-spreadsheet td div',
         'rule': '''
                     line-height: 15px;
@@ -296,16 +334,6 @@ def display_centered_title(title: str):
             html.Hr()
         ]
     )
-
-
-dashboard = [
-    display_centered_title('En Cours'),
-    display_column_cards(),
-    display_centered_title('Historique élevage'),
-    display_historical_cycle(),
-    display_centered_title('Données brutes'),
-    display_raw_data()
-]
 
 
 #########
@@ -509,6 +537,10 @@ clear_form_button = dbc.Row(
 )
 
 
+##########
+# Layout #
+##########
+
 form_input_marc = [
     title_form("Marc de pomme"),
     column_form,
@@ -557,9 +589,19 @@ form_input_mec = [
     send_form_button
 ]
 
-##########
-# Layout #
-##########
+
+dashboard = [
+    display_centered_title('En Cours'),
+    dmc.Button("Refresh", id='refresh-data-btn'),
+    refresh_btn_toast('Data Refreshed !'),
+    dbc.Spinner(html.Div(id='column-cards'), color="secondary", type="grow"),
+    display_centered_title('Historique élevage'),
+    dbc.Spinner(html.Div(id='historical-cycle'),
+                color="secondary", type="grow"),
+    display_centered_title('Données brutes'),
+    dbc.Spinner(html.Div(id='raw-data'), color="secondary", type="grow"),
+]
+
 
 layout = dbc.Container(
     [
@@ -585,7 +627,6 @@ layout = dbc.Container(
 ############
 # Callback #
 ############
-
 
 @callback(
     Output('output', 'children'),
@@ -685,6 +726,27 @@ def select_value(current_page, filters):
     uri_filters = ''
     if filters != []:
         uri_filters = ''.join('column=' + filter + '&' for filter in filters)
-    r_uri = f'{API_URL}/recolte-nb?{uri_filters}&limit={cycle_page_size}&offset={(current_page-1)*cycle_page_size}'
-    historical_harvests = json.loads(requests.get(r_uri, auth=auth).text)
-    return [[display_cycle(harvest['recolte_nb']) for harvest in historical_harvests['results']], display_pagination_cycle(current_page, math.ceil(historical_harvests['count']/cycle_page_size))]
+    historical_harvests = get_all_recolte_paginated(uri_filters, current_page)
+    return [[display_cycle(harvest['recolte_nb']) for harvest in historical_harvests['results']], display_pagination_cycle(current_page, math.ceil(historical_harvests['count']/CYCLE_PAGE_SIZE))]
+
+
+@callback(
+    Output('historical-cycle', 'children'),
+    Output('column-cards', 'children'),
+    Output('raw-data', 'children'),
+    Input('refresh-data-btn', 'n_clicks')
+)
+def populate_historical_cycle(n_clicks):
+    return display_historical_cycle(all_columns), display_column_cards(all_columns), display_raw_data(all_actions)
+
+
+@callback(
+    Output("positioned-toast", "is_open"),
+    Input('refresh-data-btn', 'n_clicks')
+)
+def refresh_data(n_clicks):
+    if n_clicks:
+        all_columns = get_all_columns()
+        all_actions = get_all_actions()
+        return True
+    return False
