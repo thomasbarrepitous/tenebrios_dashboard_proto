@@ -272,8 +272,11 @@ def display_pagination_cycle(current_page: int, total_page_size: int):
 def display_cycle(recolte_nb: str):
     harvest_cycle = get_harvest_cycle(recolte_nb)
     return dbc.Col(
-        html.P(dmc.Highlight(f'{harvest_cycle[0]["recolte_nb"]} : {harvest_cycle[0]["date"]} -> {harvest_cycle[1]["date"]}',
-               highlight=harvest_cycle[0]["recolte_nb"], highlightColor='primary', className="mb-1 text-center text-nowrap bd-highlight")),
+        dmc.NavLink(
+            label=dmc.Highlight(f'{harvest_cycle[0]["recolte_nb"]} : {harvest_cycle[0]["date"]} -> {harvest_cycle[1]["date"]}',
+               highlight=harvest_cycle[0]["recolte_nb"], highlightColor='primary', className="mb-1 text-center text-nowrap bd-highlight"),
+            href=f'/tracability/{harvest_cycle[0]["recolte_nb"]}'
+        ),
         width={"size": 6, "offset": 3},
         className='text-center'
     )
@@ -727,7 +730,8 @@ def select_value(current_page, filters):
     if filters != []:
         uri_filters = ''.join('column=' + filter + '&' for filter in filters)
     historical_harvests = get_all_recolte_paginated(uri_filters, current_page)
-    return [[display_cycle(harvest['recolte_nb']) for harvest in historical_harvests['results']], display_pagination_cycle(current_page, math.ceil(historical_harvests['count']/CYCLE_PAGE_SIZE))]
+    return [[display_cycle(harvest['recolte_nb']) for harvest in historical_harvests['results']], 
+            display_pagination_cycle(current_page, math.ceil(historical_harvests['count']/CYCLE_PAGE_SIZE))]
 
 
 @callback(
