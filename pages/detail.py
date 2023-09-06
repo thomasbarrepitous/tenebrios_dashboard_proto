@@ -30,10 +30,12 @@ def get_details_from_recolte_nb(recolte_nb):
 
 
 def get_date_mec_from_actions_df(actions_df: pd.DataFrame) -> datetime:
+    """Return the date of the Mise En Culture."""
     return actions_df.query("resourcetype == 'MiseEnCulture'")["date"].values[0]
 
 
 def get_date_recolte_from_actions_df(actions_df: pd.DataFrame) -> datetime:
+    """Return the date of the Recolte."""
     return actions_df.query("resourcetype == 'Recolte'")["date"].values[0]
 
 
@@ -117,7 +119,7 @@ def display_top_title(actions):
 def display_indicators_layout(actions):
     """Display indicators layout of the details app."""
     actions_df = pd.DataFrame(actions)
-    calculate_indicators(actions_df)
+    indicators_dict = calculate_indicators(actions_df)
     return [
         dbc.Row(dmc.Divider(label=html.H3("Indicateurs"), labelPosition="center")),
         dbc.Row(
@@ -126,10 +128,30 @@ def display_indicators_layout(actions):
         ),
         dbc.Row(
             [
-                dbc.Col([html.H4(f"Date de mise en culture"), html.P("13 aout 3932")]),
-                dbc.Col([html.H4(f"Date de recolte"), html.P("14 aout 1093")]),
-                dbc.Col([html.H4(f"Nombre de bacs"), html.P("111")]),
-                dbc.Col([html.H4(f"Quantite recoltee"), html.P("11")]),
+                dbc.Col(
+                    [
+                        html.H4(f"Date de mise en culture"),
+                        html.P(indicators_dict["date_mec"]),
+                    ]
+                ),
+                dbc.Col(
+                    [
+                        html.H4(f"Date de recolte"),
+                        html.P(indicators_dict["date_recolte"]),
+                    ]
+                ),
+                dbc.Col(
+                    [
+                        html.H4(f"Nombre de bacs"),
+                        html.P(f'{indicators_dict["nb_bacs"] or 0} bacs'),
+                    ]
+                ),
+                dbc.Col(
+                    [
+                        html.H4(f"Quantite recoltee"),
+                        html.P(f'{indicators_dict["qte_recolte"]} g'),
+                    ]
+                ),
             ]
         ),
         dbc.Row(
@@ -146,7 +168,7 @@ def display_indicators_layout(actions):
                         html.P("13 aout 3932"),
                     ]
                 ),
-                dbc.Col([html.H4(f"Feed Ratio Conversion "), html.P("13 aout 3932")]),
+                dbc.Col([html.H4(f"Feed Ratio Conversion "), html.P()]),
                 dbc.Col(
                     [html.H4(f"Croissance journalière moyenne"), html.P("13 aout 3932")]
                 ),
