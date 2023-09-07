@@ -49,6 +49,13 @@ def get_qte_recolte_from_actions_df(actions_df: pd.DataFrame) -> int:
     )
 
 
+def get_iwm_recolte_from_actions_df(actions_df: pd.DataFrame) -> int:
+    actions_df["date"] = pd.to_datetime(actions_df["date"])
+    filtered_df = actions_df[actions_df["imw100_weight"].notnull()]
+    latest_row = filtered_df.loc[filtered_df["date"].idxmax()]
+    return latest_row["imw100_weight"]
+
+
 def get_total_son_from_actions_df(actions_df: pd.DataFrame) -> int:
     return sum(
         actions_df.query("resourcetype == 'NourrisageSon'")["given_quantity"].values
@@ -84,6 +91,7 @@ def calculate_indicators(actions_df: pd.DataFrame) -> dict:
         "nb_bacs": get_nb_bacs_from_actions_df(actions_df),
         "qte_recolte": get_qte_recolte_from_actions_df(actions_df),
         # Indicateurs Moyens
+        "imw_recolte": get_iwm_recolte_from_actions_df(actions_df),
         "total_son": get_total_son_from_actions_df(actions_df),
         "total_nourriture_humide": get_total_nourriture_humide_from_actions_df(
             actions_df
@@ -94,7 +102,6 @@ def calculate_indicators(actions_df: pd.DataFrame) -> dict:
         ),
         "assimilation_moyenne": get_assimilation_moyenne_from_actions_df(actions_df),
     }
-    print(map)
     return map
 
 
@@ -113,6 +120,7 @@ def action_item_component(action):
 
 
 def display_top_title(actions):
+    print(actions)
     return [dbc.Row(html.H2(actions[0]["recolte_nb"], className="text-center"))]
 
 
@@ -160,19 +168,44 @@ def display_indicators_layout(actions):
         ),
         dbc.Row(
             [
-                dbc.Col([html.H4(f"IWM à la récolte"), html.P("13 aout 3932")]),
-                dbc.Col([html.H4(f"Son total donné"), html.P("13 aout 3932")]),
+                dbc.Col(
+                    [
+                        html.H4(f"IWM à la récolte"),
+                        html.P(f'{indicators_dict["imw_recolte"]} g'),
+                    ]
+                ),
+                dbc.Col(
+                    [
+                        html.H4(f"Son total donné"),
+                        html.P(f'{indicators_dict["total_son"]} g'),
+                    ]
+                ),
                 dbc.Col(
                     [
                         html.H4(f"Nourriture humide totale donnée"),
-                        html.P("13 aout 3932"),
+                        html.P(f'{indicators_dict["total_nourriture_humide"]} g'),
                     ]
                 ),
-                dbc.Col([html.H4(f"Feed Ratio Conversion "), html.P()]),
                 dbc.Col(
-                    [html.H4(f"Croissance journalière moyenne"), html.P("13 aout 3932")]
+                    [
+                        html.H4(f"Feed Ratio Conversion "),
+                        html.P(indicators_dict["feed_ratio_conversion"]),
+                    ]
                 ),
-                dbc.Col([html.H4(f"Assimilation moyenne "), html.P("13 aout 3932")]),
+                dbc.Col(
+                    [
+                        html.H4(f"Croissance journalière moyenne"),
+                        html.P(
+                            f'{indicators_dict["croissance_journaliere_moyenne"] or 0} %'
+                        ),
+                    ]
+                ),
+                dbc.Col(
+                    [
+                        html.H4(f"Assimilation moyenne "),
+                        html.P(indicators_dict["assimilation_moyenne"]),
+                    ]
+                ),
             ]
         ),
     ]
