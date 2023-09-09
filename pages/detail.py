@@ -6,6 +6,8 @@ import requests
 import dash_mantine_components as dmc
 from datetime import datetime
 import pandas as pd
+import re
+import math
 
 dash.register_page(__name__, path_template="/tracability/<recolte_nb>")
 
@@ -19,6 +21,14 @@ with open("auth.json") as auth_file:
 
 def layout(recolte_nb=None):
     return display_layout(recolte_nb)
+
+
+def timestamp_to_readable_datetime(date) -> datetime:
+    return datetime.strptime(date, "%Y-%m-%dT%H:%M:%S.%fZ")
+
+
+def api_date_to_datetime(date) -> datetime:
+    return pd.to_datetime(date, format="%Y-%m-%dT%H:%M:%S.%fZ")
 
 
 # Fetch specific recolte in the API
@@ -49,7 +59,7 @@ def get_qte_recolte_from_actions_df(actions_df: pd.DataFrame) -> int:
     )
 
 
-def get_iwm_recolte_from_actions_df(actions_df: pd.DataFrame) -> int:
+def get_imw_recolte_from_actions_df(actions_df: pd.DataFrame) -> int:
     actions_df["date"] = pd.to_datetime(actions_df["date"])
     filtered_df = actions_df[actions_df["imw100_weight"].notnull()]
     latest_row = filtered_df.loc[filtered_df["date"].idxmax()]
@@ -69,10 +79,11 @@ def get_total_nourriture_humide_from_actions_df(actions_df: pd.DataFrame) -> int
 
 
 def get_feed_ratio_conversion_from_actions_df(actions_df: pd.DataFrame) -> int:
-    # return get_total_son_from_actions_df(actions_df) / get_qte_recolte_from_actions_df(
-    #     actions_df
-    # )
-    pass
+    # filtered_df = actions_df.dropna(subset=["given_quantity", "sieved_quantity"])
+    sum_of_given_over_sieved = (
+        actions_df["given_quantity"].sum() / actions_df["sieved_quantity"].sum()
+    )
+    return sum_of_given_over_sieved.round(2)
 
 
 def get_croissance_journaliere_moyenne_from_actions_df(actions_df: pd.DataFrame) -> int:
@@ -80,7 +91,10 @@ def get_croissance_journaliere_moyenne_from_actions_df(actions_df: pd.DataFrame)
 
 
 def get_assimilation_moyenne_from_actions_df(actions_df: pd.DataFrame) -> int:
-    pass
+    assimilation_moyenne = (
+        actions_df["given_quantity"].sum() / actions_df["sieved_quantity"].sum()
+    ) * 100
+    return assimilation_moyenne
 
 
 def calculate_indicators(actions_df: pd.DataFrame) -> dict:
@@ -91,7 +105,7 @@ def calculate_indicators(actions_df: pd.DataFrame) -> dict:
         "nb_bacs": get_nb_bacs_from_actions_df(actions_df),
         "qte_recolte": get_qte_recolte_from_actions_df(actions_df),
         # Indicateurs Moyens
-        "imw_recolte": get_iwm_recolte_from_actions_df(actions_df),
+        "imw_recolte": get_imw_recolte_from_actions_df(actions_df),
         "total_son": get_total_son_from_actions_df(actions_df),
         "total_nourriture_humide": get_total_nourriture_humide_from_actions_df(
             actions_df
@@ -107,21 +121,39 @@ def calculate_indicators(actions_df: pd.DataFrame) -> dict:
 
 def action_item_component(action):
     """Build one item of the full historical actions accordion."""
-    action_date = datetime.strptime(action["date"], "%Y-%m-%dT%H:%M:%S.%fZ")
+    action_date = api_date_to_datetime(action["date"])
+    accordion_action_title = re.sub(r"(\w)([A-Z])", r"\1 \2", action["resourcetype"])
+    header = [html.Thead(html.Tr([html.Th(key) for key, value in action.items()]))]
+    body = [html.Tbody(html.Tr([html.Td(value) for key, value in action.items()]))]
     return dmc.AccordionItem(
         [
             dmc.AccordionControl(
-                f'{action["resourcetype"]} du {action_date.strftime("%B %d, %Y")}'
+                f'{accordion_action_title} du {action_date.strftime("%B %d, %Y")}'
             ),
-            dmc.AccordionPanel(f"{action}"),
+            dmc.AccordionPanel(dmc.Table(header + body)),
         ],
         value=action["date"],
     )
 
 
 def display_top_title(actions):
-    print(actions)
     return [dbc.Row(html.H2(actions[0]["recolte_nb"], className="text-center"))]
+
+
+def individual_indicator_component(indicator_name, indicator_value):
+    return dbc.Col(
+        dmc.Paper(
+            [
+                html.H4(indicator_name),
+                html.P(indicator_value),
+            ],
+            shadow="xs",
+            p="xl",
+            #     style={"height": "20vh"},
+        ),
+        align="center",
+        width=3,
+    )
 
 
 def display_indicators_layout(actions):
@@ -136,75 +168,48 @@ def display_indicators_layout(actions):
         ),
         dbc.Row(
             [
-                dbc.Col(
-                    [
-                        html.H4(f"Date de mise en culture"),
-                        html.P(indicators_dict["date_mec"]),
-                    ]
+                individual_indicator_component(
+                    f"Date de mise en culture", indicators_dict["date_mec"]
                 ),
-                dbc.Col(
-                    [
-                        html.H4(f"Date de recolte"),
-                        html.P(indicators_dict["date_recolte"]),
-                    ]
+                individual_indicator_component(
+                    f"Date de recolte", indicators_dict["date_recolte"]
                 ),
-                dbc.Col(
-                    [
-                        html.H4(f"Nombre de bacs"),
-                        html.P(f'{indicators_dict["nb_bacs"] or 0} bacs'),
-                    ]
+                individual_indicator_component(
+                    f"Nombre de bacs", indicators_dict["nb_bacs"]
                 ),
-                dbc.Col(
-                    [
-                        html.H4(f"Quantite recoltee"),
-                        html.P(f'{indicators_dict["qte_recolte"]} g'),
-                    ]
+                individual_indicator_component(
+                    f"Quantite recoltee", f'{indicators_dict["qte_recolte"]} g'
                 ),
             ]
         ),
         dbc.Row(
-            html.H4("Indicateurs moyens"),
-            className="text-center text-decoration-underline",
+            html.H4(
+                "Indicateurs moyens",
+                className="text-center text-decoration-underline",
+            ),
         ),
         dbc.Row(
             [
-                dbc.Col(
-                    [
-                        html.H4(f"IWM à la récolte"),
-                        html.P(f'{indicators_dict["imw_recolte"]} g'),
-                    ]
+                individual_indicator_component(
+                    f"IMW à la récolte", f'{indicators_dict["imw_recolte"]} g'
                 ),
-                dbc.Col(
-                    [
-                        html.H4(f"Son total donné"),
-                        html.P(f'{indicators_dict["total_son"]} g'),
-                    ]
+                individual_indicator_component(
+                    f"Total son donné", f'{indicators_dict["total_son"]} g'
                 ),
-                dbc.Col(
-                    [
-                        html.H4(f"Nourriture humide totale donnée"),
-                        html.P(f'{indicators_dict["total_nourriture_humide"]} g'),
-                    ]
+                individual_indicator_component(
+                    f"Total nourriture humide donnée",
+                    f'{indicators_dict["total_nourriture_humide"]} g',
                 ),
-                dbc.Col(
-                    [
-                        html.H4(f"Feed Ratio Conversion "),
-                        html.P(indicators_dict["feed_ratio_conversion"]),
-                    ]
+                individual_indicator_component(
+                    f"Feed Ratio Conversion", indicators_dict["feed_ratio_conversion"]
                 ),
-                dbc.Col(
-                    [
-                        html.H4(f"Croissance journalière moyenne"),
-                        html.P(
-                            f'{indicators_dict["croissance_journaliere_moyenne"] or 0} %'
-                        ),
-                    ]
+                individual_indicator_component(
+                    f"Croissance journalière moyenne",
+                    f'{indicators_dict["croissance_journaliere_moyenne"] or 0} %',
                 ),
-                dbc.Col(
-                    [
-                        html.H4(f"Assimilation moyenne "),
-                        html.P(indicators_dict["assimilation_moyenne"]),
-                    ]
+                individual_indicator_component(
+                    f"Assimilation moyenne",
+                    f'{indicators_dict["assimilation_moyenne"] or 0} %',
                 ),
             ]
         ),
