@@ -9,7 +9,7 @@ import pandas as pd
 import re
 import math
 
-dash.register_page(__name__, path_template="/tracability/<recolte_nb>")
+dash.register_page(__name__, path_template="/tracability/recolte/<recolte_nb>")
 
 
 API_URL = f"http://127.0.0.1:8000/api/actions"
