@@ -3,20 +3,10 @@ from dash import callback, html, dcc, Output, Input, State, MATCH, ALL, dash_tab
 import pandas as pd
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
-import json
 from datetime import date
 import numpy as np
-import requests
-import re
 import math
-from tenebrios_utils import apiCalls
-
-
-API_URL = f"http://127.0.0.1:8000/api/actions"
-
-with open("auth.json") as auth_file:
-    auth_json = json.loads(auth_file.read())
-    auth = (auth_json["username"], auth_json["password"])
+from tenebrios_utils import apiCalls, formatting
 
 
 dash.register_page(__name__)
@@ -69,10 +59,6 @@ def parse_form_index_to_request(form_index):
     return form_index
 
 
-def add_space_before_caps(str):
-    return re.sub("([A-Z])", r" \1", str)
-
-
 def latest_breeding_listgroup(df_column):
     # Change empty strings to pd.NaN
     pd.options.mode.use_inf_as_na = True
@@ -83,8 +69,8 @@ def latest_breeding_listgroup(df_column):
                     html.Div(
                         html.H5(
                             dmc.Highlight(
-                                f"{add_space_before_caps(action[1]['resourcetype'])}",
-                                highlight=add_space_before_caps(
+                                f"{formatting.add_space_before_caps(action[1]['resourcetype'])}",
+                                highlight=formatting.add_space_before_caps(
                                     action[1]["resourcetype"]
                                 ),
                                 className="mb-1 text-center text-nowrap bd-highlight",
@@ -185,7 +171,7 @@ def column_card(column):
                 dbc.CardBody(
                     [
                         html.H6(
-                            f"Dernière action : {add_space_before_caps(df_column.iloc[-1]['resourcetype'])}",
+                            f"Dernière action : {formatting.add_space_before_caps(df_column.iloc[-1]['resourcetype'])}",
                             className="card-subtitle",
                         ),
                         html.P(

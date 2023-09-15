@@ -1,128 +1,52 @@
 import dash
 from dash import html
 import dash_bootstrap_components as dbc
-import json
-import requests
 import dash_mantine_components as dmc
-from datetime import datetime
 import pandas as pd
 import re
-import math
+from tenebrios_utils import formatting, apiCalls, dfActions
+
 
 dash.register_page(__name__, path_template="/tracability/recolte/<recolte_nb>")
 
 
 API_URL = f"http://127.0.0.1:8000/api/actions"
 
-with open("auth.json") as auth_file:
-    auth_json = json.loads(auth_file.read())
-    auth = (auth_json["username"], auth_json["password"])
-
 
 def layout(recolte_nb=None):
     return display_layout(recolte_nb)
 
 
-def timestamp_to_readable_datetime(date) -> datetime:
-    return datetime.strptime(date, "%Y-%m-%dT%H:%M:%S.%fZ")
-
-
-def api_date_to_datetime(date) -> datetime:
-    return pd.to_datetime(date, format="%Y-%m-%dT%H:%M:%S.%fZ")
-
-
-# Fetch specific recolte in the API
-def get_details_from_recolte_nb(recolte_nb):
-    """Fetch all actions for given recolte_nb."""
-    return json.loads(
-        requests.get(f"{API_URL}/recolte-nb/{recolte_nb}", auth=auth).text
-    )
-
-
-def get_date_mec_from_actions_df(actions_df: pd.DataFrame) -> datetime:
-    """Return the date of the Mise En Culture."""
-    return actions_df.query("resourcetype == 'MiseEnCulture'")["date"].values[0]
-
-
-def get_date_recolte_from_actions_df(actions_df: pd.DataFrame) -> datetime:
-    """Return the date of the Recolte."""
-    return actions_df.query("resourcetype == 'Recolte'")["date"].values[0]
-
-
-def get_nb_bacs_from_actions_df(actions_df: pd.DataFrame) -> int:
-    pass
-
-
-def get_qte_recolte_from_actions_df(actions_df: pd.DataFrame) -> int:
-    return sum(
-        actions_df.query("resourcetype == 'Recolte'")["harvested_quantity"].values
-    )
-
-
-def get_imw_recolte_from_actions_df(actions_df: pd.DataFrame) -> int:
-    actions_df["date"] = pd.to_datetime(actions_df["date"])
-    filtered_df = actions_df[actions_df["imw100_weight"].notnull()]
-    latest_row = filtered_df.loc[filtered_df["date"].idxmax()]
-    return latest_row["imw100_weight"]
-
-
-def get_total_son_from_actions_df(actions_df: pd.DataFrame) -> int:
-    return sum(
-        actions_df.query("resourcetype == 'NourrisageSon'")["given_quantity"].values
-    )
-
-
-def get_total_nourriture_humide_from_actions_df(actions_df: pd.DataFrame) -> int:
-    return sum(
-        actions_df.query("resourcetype == 'NourrisageHumide'")["given_quantity"].values
-    )
-
-
-def get_feed_ratio_conversion_from_actions_df(actions_df: pd.DataFrame) -> int:
-    # filtered_df = actions_df.dropna(subset=["given_quantity", "sieved_quantity"])
-    sum_of_given_over_sieved = (
-        actions_df["given_quantity"].sum() / actions_df["sieved_quantity"].sum()
-    )
-    return sum_of_given_over_sieved.round(2)
-
-
-def get_croissance_journaliere_moyenne_from_actions_df(actions_df: pd.DataFrame) -> int:
-    pass
-
-
-def get_assimilation_moyenne_from_actions_df(actions_df: pd.DataFrame) -> int:
-    assimilation_moyenne = (
-        actions_df["given_quantity"].sum() / actions_df["sieved_quantity"].sum()
-    ) * 100
-    return assimilation_moyenne
-
-
 def calculate_indicators(actions_df: pd.DataFrame) -> dict:
     map = {
         # Indicateurs Totaux / Globaux
-        "date_mec": get_date_mec_from_actions_df(actions_df),
-        "date_recolte": get_date_recolte_from_actions_df(actions_df),
-        "nb_bacs": get_nb_bacs_from_actions_df(actions_df),
-        "qte_recolte": get_qte_recolte_from_actions_df(actions_df),
+        "date_mec": dfActions.get_date_mec_from_actions_df(actions_df),
+        "date_recolte": dfActions.get_date_recolte_from_actions_df(actions_df),
+        "nb_bacs": dfActions.get_nb_bacs_from_actions_df(actions_df),
+        "qte_recolte": dfActions.get_qte_recolte_from_actions_df(actions_df),
         # Indicateurs Moyens
-        "imw_recolte": get_imw_recolte_from_actions_df(actions_df),
-        "total_son": get_total_son_from_actions_df(actions_df),
-        "total_nourriture_humide": get_total_nourriture_humide_from_actions_df(
+        "imw_recolte": dfActions.get_imw_recolte_from_actions_df(actions_df),
+        "total_son": dfActions.get_total_son_from_actions_df(actions_df),
+        "total_nourriture_humide": dfActions.get_total_nourriture_humide_from_actions_df(
             actions_df
         ),
-        "feed_ratio_conversion": get_feed_ratio_conversion_from_actions_df(actions_df),
-        "croissance_journaliere_moyenne": get_croissance_journaliere_moyenne_from_actions_df(
+        "feed_ratio_conversion": dfActions.get_feed_ratio_conversion_from_actions_df(
             actions_df
         ),
-        "assimilation_moyenne": get_assimilation_moyenne_from_actions_df(actions_df),
+        "croissance_journaliere_moyenne": dfActions.get_croissance_journaliere_moyenne_from_actions_df(
+            actions_df
+        ),
+        "assimilation_moyenne": dfActions.get_assimilation_moyenne_from_actions_df(
+            actions_df
+        ),
     }
     return map
 
 
 def action_item_component(action):
     """Build one item of the full historical actions accordion."""
-    action_date = api_date_to_datetime(action["date"])
-    accordion_action_title = re.sub(r"(\w)([A-Z])", r"\1 \2", action["resourcetype"])
+    action_date = formatting.api_date_to_datetime(action["date"])
+    accordion_action_title = formatting.add_space_before_caps(action["resourcetype"])
     header = [html.Thead(html.Tr([html.Th(key) for key, value in action.items()]))]
     body = [html.Tbody(html.Tr([html.Td(value) for key, value in action.items()]))]
     return dmc.AccordionItem(
@@ -230,7 +154,7 @@ def display_historical_actions_layout(actions):
 
 def display_layout(recolte_nb):
     """Full layout of detail page."""
-    actions = get_details_from_recolte_nb(recolte_nb)
+    actions = apiCalls.get_details_from_recolte_nb(recolte_nb)
     return dbc.Container(
         display_top_title(actions)
         + display_indicators_layout(actions)
