@@ -39,26 +39,6 @@ def refresh_btn_toast(text: str):
 ######################
 
 
-def parse_form_index_to_request(form_index):
-    if form_index == "Marc-bac":
-        return "given_quantity_bac"
-    elif form_index == "Marc-total":
-        return "given_quantity"
-    elif form_index == "Son-bac":
-        return "given_quantity_bac"
-    elif form_index == "Son-total":
-        return "given_quantity"
-    elif form_index == "datearrivagemarc":
-        return "marc_arrival_date"
-    elif form_index == "datearrivageson":
-        return "son_arrival_date"
-    elif form_index == "Qtetamisée":
-        return "sieved_quantity"
-    elif form_index == "Qterécoltée":
-        return "harvested_quantity"
-    return form_index
-
-
 def latest_breeding_listgroup(df_column):
     # Change empty strings to pd.NaN
     pd.options.mode.use_inf_as_na = True
@@ -644,16 +624,18 @@ layout = dbc.Container(
     State({"type": "date-data", "index": ALL}, "id"),
     State({"type": "date-data", "index": ALL}, "date"),
 )
-def send_post_request(n_clicks, input_ids, input_values, date_ids, date_values):
+def callback_send_post_request(
+    n_clicks, input_ids, input_values, date_ids, date_values
+):
     if n_clicks:
         post_data: dict = {}
         input_ids = date_ids + input_ids
         input_values = date_values + input_values
         for id, values in zip(input_ids, input_values):
-            post_data[parse_form_index_to_request(id["index"])] = values
+            post_data[formatting.form_index_to_request_id(id["index"])] = values
         # POST request
-        apiCalls.post_action(post_data)
-
+        # apiCalls.post_action(post_data)
+        # print(post_data)
     return ""
 
 

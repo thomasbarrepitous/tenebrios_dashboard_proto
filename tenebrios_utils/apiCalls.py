@@ -12,12 +12,28 @@ API_URL = f"http://127.0.0.1:8000/api"
 ###################
 
 
-def post_action(post_data):
+def post_action(post_data: dict):
     response = requests.post(f"{API_URL}/actions", data=post_data, auth=apiAuth.auth)
     if response.status_code == 201:
         print(f"POST request successful. Response: {response.text}")
     else:
         print(f"POST request failed. Status Code: {response.text}")
+    return response.status_code
+
+
+def put_action(inserted_data: dict, id: str):
+    legacy_data = get_action_by_id(id)
+    put_data = dict(list(legacy_data.items()) + list(inserted_data.items()))
+    print(put_data)
+    response = requests.put(f"{API_URL}/actions/{id}", data=put_data, auth=apiAuth.auth)
+    if response.status_code == 200:
+        print(
+            f"PUT request successful. Status Code: {response.status_code}. Response: {response.text}"
+        )
+    else:
+        print(
+            f"PUT request failed. Status Code: {response.status_code}. Response : {response.text}"
+        )
     return response.status_code
 
 

@@ -3,7 +3,6 @@ from dash import html
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 import pandas as pd
-import re
 from tenebrios_utils import formatting, apiCalls, dfActions
 
 
@@ -73,7 +72,7 @@ def individual_indicator_component(indicator_name, indicator_value):
             ],
             shadow="xs",
             p="xl",
-            #     style={"height": "20vh"},
+            style={"height": "20vh"},
         ),
         align="center",
         width=3,
