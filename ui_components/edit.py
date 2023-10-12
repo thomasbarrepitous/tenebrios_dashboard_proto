@@ -27,7 +27,6 @@ def basic_edit_switch(label: str, value: bool = True, id=None):
             "type": "input-data",
             "index": index,
         }
-
     return html.Div(
         [
             dbc.Label(f"{label}", width="auto"),

@@ -75,3 +75,22 @@ def refresh_page_button(title: str = "Rafraichir"):
             external_link=True,
         ),
     )
+
+
+def action_choice_dropdown():
+    return dbc.InputGroup(
+        [
+            dbc.InputGroupText("Action"),
+            dbc.Select(
+                id={"type": "input-data", "index": "resourcetype"},
+                options=[
+                    {"label": "Mise en culture", "value": "MiseEnCulture"},
+                    {"label": "Nourrisage Humide", "value": "NourrisageHumide"},
+                    {"label": "Nourrisage Son", "value": "NourrisageSon"},
+                    {"label": "Tamisage", "value": "Tamisage"},
+                    {"label": "Récolte", "value": "Recolte"},
+                ],
+                value="NourrisageHumide",
+            ),
+        ]
+    )

@@ -7,6 +7,7 @@ from datetime import date
 import numpy as np
 import math
 from tenebrios_utils import apiCalls, formatting
+from ui_components import common
 
 
 dash.register_page(__name__)
@@ -388,24 +389,7 @@ header_input = dbc.Row(
     [
         dbc.Col(html.H4(f'{date.today().strftime("%B %d, %Y")}')),
         dbc.Col(html.H4(f"Colonne n°17")),
-        dbc.Col(
-            dbc.InputGroup(
-                [
-                    dbc.InputGroupText("Action"),
-                    dbc.Select(
-                        id={"type": "input-data", "index": "resourcetype"},
-                        options=[
-                            {"label": "Mise en culture", "value": "MiseEnCulture"},
-                            {"label": "Nourrisage Humide", "value": "NourrisageHumide"},
-                            {"label": "Nourrisage Son", "value": "NourrisageSon"},
-                            {"label": "Tamisage", "value": "Tamisage"},
-                            {"label": "Récolte", "value": "Recolte"},
-                        ],
-                        value="NourrisageHumide",
-                    ),
-                ]
-            )
-        ),
+        dbc.Col(common.action_choice_dropdown()),
     ],
     class_name="text-center",
 )

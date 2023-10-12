@@ -3,6 +3,7 @@ from dash import callback, Output, Input, State, ALL, html, dcc
 import dash_bootstrap_components as dbc
 from tenebrios_utils import formatting, apiCalls
 from ui_components import common, edit
+from dash.exceptions import PreventUpdate
 
 dash.register_page(__name__, path_template="/tracability/action/<action_id>")
 
@@ -37,33 +38,12 @@ def display_edit_form(action: dict):
     )
 
 
-def display_layout(action: dict):
+def display_layout():
     return dbc.Container(
         [
             dcc.Location(id="url", refresh=False),
-            dbc.Col(
-                dbc.InputGroup(
-                    [
-                        dbc.InputGroupText("Action"),
-                        dbc.Select(
-                            id={"type": "input-data", "index": "resourcetype"},
-                            options=[
-                                {"label": "Mise en culture", "value": "MiseEnCulture"},
-                                {
-                                    "label": "Nourrisage Humide",
-                                    "value": "NourrisageHumide",
-                                },
-                                {"label": "Nourrisage Son", "value": "NourrisageSon"},
-                                {"label": "Tamisage", "value": "Tamisage"},
-                                {"label": "Récolte", "value": "Recolte"},
-                            ],
-                            value="NourrisageHumide",
-                        ),
-                    ]
-                ),
-                width=4,
-            ),
-            display_edit_form(action),
+            dcc.Store(id="api-action-store"),
+            html.Div(id="edit-action-form"),
             common.send_form_button(),
             common.refresh_page_button("Effacer"),
             html.Div(id="dummy-output"),
@@ -72,8 +52,21 @@ def display_layout(action: dict):
 
 
 def layout(action_id):
-    action = apiCalls.get_action_by_id(action_id)
-    return display_layout(action)
+    return display_layout()
+
+
+#############
+# Callbacks #
+#############
+
+
+@callback(
+    Output("api-action-store", "data"),
+    Input("url", "pathname"),
+)
+def update_action_store(pathname):
+    action_id = pathname.split("/")[-1]
+    return apiCalls.get_action_by_id(action_id)
 
 
 @callback(
@@ -84,10 +77,6 @@ def layout(action_id):
     State({"type": "input-data", "index": ALL}, "value"),
     State({"type": "date-data", "index": ALL}, "id"),
     State({"type": "date-data", "index": ALL}, "date"),
-    State(
-        {"type": "input-data", "index": "switch-is-anomaly"}, "value"
-    ),  # Add switch values
-    State({"type": "input-data", "index": "switch-is-imw100-weighted"}, "value"),
 )
 def send_put_request(
     n_clicks,
@@ -96,8 +85,6 @@ def send_put_request(
     input_values,
     date_ids,
     date_values,
-    is_anomaly,
-    is_imw100_weighted,
 ):
     "Capture all input and date IDs and values and send them to the API"
     action_id = pathname.split("/")[-1]
@@ -110,11 +97,11 @@ def send_put_request(
             put_data[formatting.form_index_to_request_id_edit(id["index"])] = values
 
         # Check the state of the switches and reset text area values if switches are off
-        if not is_anomaly:
+        if not put_data["anomaly"]:
             put_data[
                 formatting.form_index_to_request_id_edit("textarea-anomaly-comment")
             ] = ""
-        if not is_imw100_weighted:
+        if not put_data["is_imw100_weighted"]:
             put_data[
                 formatting.form_index_to_request_id_edit("textarea-imw100-weight")
             ] = ""
@@ -145,3 +132,13 @@ def display_pesage_comment(value):
 @callback(Output("refresh_page_button", "href"), [Input("url", "pathname")])
 def refresh_page_button(relative_pathname):
     return relative_pathname
+
+
+@callback(
+    Output("edit-action-form", "children"),
+    Input("api-action-store", "data"),
+)
+def render_action_form(action):
+    if action is None:
+        raise PreventUpdate
+    return display_edit_form(action)
