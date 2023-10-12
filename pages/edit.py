@@ -41,9 +41,31 @@ def display_layout(action: dict):
     return dbc.Container(
         [
             dcc.Location(id="url", refresh=False),
+            dbc.Col(
+                dbc.InputGroup(
+                    [
+                        dbc.InputGroupText("Action"),
+                        dbc.Select(
+                            id={"type": "input-data", "index": "resourcetype"},
+                            options=[
+                                {"label": "Mise en culture", "value": "MiseEnCulture"},
+                                {
+                                    "label": "Nourrisage Humide",
+                                    "value": "NourrisageHumide",
+                                },
+                                {"label": "Nourrisage Son", "value": "NourrisageSon"},
+                                {"label": "Tamisage", "value": "Tamisage"},
+                                {"label": "Récolte", "value": "Recolte"},
+                            ],
+                            value="NourrisageHumide",
+                        ),
+                    ]
+                ),
+                width=4,
+            ),
             display_edit_form(action),
             common.send_form_button(),
-            # common.refresh_page_button("Effacer"),
+            common.refresh_page_button("Effacer"),
             html.Div(id="dummy-output"),
         ]
     )
@@ -51,7 +73,6 @@ def display_layout(action: dict):
 
 def layout(action_id):
     action = apiCalls.get_action_by_id(action_id)
-    print(action)
     return display_layout(action)
 
 
@@ -119,3 +140,8 @@ def display_pesage_comment(value):
     if value:
         return {"display": "block"}
     return {"display": "none"}
+
+
+@callback(Output("refresh_page_button", "href"), [Input("url", "pathname")])
+def refresh_page_button(relative_pathname):
+    return relative_pathname

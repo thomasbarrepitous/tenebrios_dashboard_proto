@@ -284,7 +284,6 @@ def display_raw_data(actions):
 def display_centered_title(title: str):
     return dbc.Row(
         [
-            html.Hr(),
             dbc.Col(
                 html.H2(f"{title}"),
                 width={"size": 6, "offset": 3},
@@ -298,20 +297,6 @@ def display_centered_title(title: str):
 #########
 # Input #
 #########
-
-
-def title_form(title: str):
-    return dbc.Row(
-        [
-            html.Hr(),
-            dbc.Col(
-                html.H2(f"{title}"),
-                width={"size": 6, "offset": 3},
-                className="text-center",
-            ),
-            html.Hr(),
-        ]
-    )
 
 
 def qte_donnee_duo_form(qte_name: str):
@@ -531,7 +516,7 @@ clear_form_button = dbc.Row(
 ##########
 
 form_input_marc = [
-    title_form("Marc de pomme"),
+    display_centered_title("Marc de pomme"),
     column_form,
     date_picker_form("Date"),
     qte_donnee_duo_form("Marc"),
@@ -543,7 +528,7 @@ form_input_marc = [
 
 
 form_input_son = [
-    title_form("Son de blé"),
+    display_centered_title("Son de blé"),
     column_form,
     date_picker_form("Date"),
     qte_donnee_duo_form("Son"),
@@ -553,7 +538,7 @@ form_input_son = [
 
 
 form_input_tamise = [
-    title_form("Tamisage"),
+    display_centered_title("Tamisage"),
     column_form,
     date_picker_form("Date"),
     qte_donnee_form("Qte tamisée"),
@@ -562,7 +547,7 @@ form_input_tamise = [
 
 
 form_input_recolte = [
-    title_form("Récolte"),
+    display_centered_title("Récolte"),
     column_form,
     date_picker_form("Date"),
     qte_donnee_form("Qte récoltée"),
@@ -571,7 +556,7 @@ form_input_recolte = [
 
 
 form_input_mec = [
-    title_form("Mise en culture"),
+    display_centered_title("Mise en culture"),
     column_form,
     recolte_nb_form,
     date_picker_form("Date"),

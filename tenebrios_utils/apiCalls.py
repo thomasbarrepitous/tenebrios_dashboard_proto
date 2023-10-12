@@ -24,7 +24,6 @@ def post_action(post_data: dict):
 def put_action(inserted_data: dict, id: str):
     legacy_data = get_action_by_id(id)
     put_data = dict(list(legacy_data.items()) + list(inserted_data.items()))
-    print(put_data)
     response = requests.put(f"{API_URL}/actions/{id}", data=put_data, auth=apiAuth.auth)
     if response.status_code == 200:
         print(

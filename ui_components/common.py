@@ -1,5 +1,5 @@
 import dash_bootstrap_components as dbc
-from dash import html, dcc
+from dash import html, dcc, dash, Input, Output
 from datetime import date
 from tenebrios_utils import formatting
 
@@ -63,11 +63,15 @@ def clear_form_button(title: str = "Effacer"):
 
 def refresh_page_button(title: str = "Rafraichir"):
     return dbc.Row(
+        # dcc.Link(
+        #     id="refresh_page_button",
+        # ),
         dbc.Button(
             title,
-            type="clear",
             size="lg",
             className="me-md-2 btn",
             color="secondary",
-        )
+            id="refresh_page_button",
+            external_link=True,
+        ),
     )
