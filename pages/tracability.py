@@ -726,7 +726,5 @@ def populate_historical_cycle(n_clicks):
 @callback(Output("positioned-toast", "is_open"), Input("refresh-data-btn", "n_clicks"))
 def refresh_data(n_clicks):
     if n_clicks:
-        all_columns = apiCalls.get_all_columns()
-        all_actions = apiCalls.get_all_actions()
         return True
     return False
