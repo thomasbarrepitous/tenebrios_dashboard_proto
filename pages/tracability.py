@@ -653,9 +653,9 @@ def render_content(tab):
     Input({"type": "input-data", "index": "resourcetype"}, "value"),
 )
 def render_action_form(action):
-    if action == "NourrisageHumide":
+    if action == "NourrissageHumide":
         return form_input_marc
-    elif action == "NourrisageSon":
+    elif action == "NourrissageSon":
         return form_input_son
     elif action == "Tamisage":
         return form_input_tamise

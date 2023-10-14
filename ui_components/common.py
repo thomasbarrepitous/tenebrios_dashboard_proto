@@ -101,12 +101,12 @@ def action_choice_dropdown():
                 id={"type": "input-data", "index": "resourcetype"},
                 options=[
                     {"label": "Mise en culture", "value": "MiseEnCulture"},
-                    {"label": "Nourrisage Humide", "value": "NourrisageHumide"},
-                    {"label": "Nourrisage Son", "value": "NourrisageSon"},
+                    {"label": "Nourrissage Humide", "value": "NourrissageHumide"},
+                    {"label": "Nourrissage Son", "value": "NourrissageSon"},
                     {"label": "Tamisage", "value": "Tamisage"},
                     {"label": "Récolte", "value": "Recolte"},
                 ],
-                value="NourrisageHumide",
+                value="NourrissageHumide",
             ),
         ]
     )

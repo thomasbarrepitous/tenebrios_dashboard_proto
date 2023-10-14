@@ -32,13 +32,13 @@ def get_imw_recolte_from_actions_df(actions_df: pd.DataFrame) -> int:
 
 def get_total_son_from_actions_df(actions_df: pd.DataFrame) -> int:
     return sum(
-        actions_df.query("resourcetype == 'NourrisageSon'")["given_quantity"].values
+        actions_df.query("resourcetype == 'NourrissageSon'")["given_quantity"].values
     )
 
 
 def get_total_nourriture_humide_from_actions_df(actions_df: pd.DataFrame) -> int:
     return sum(
-        actions_df.query("resourcetype == 'NourrisageHumide'")["given_quantity"].values
+        actions_df.query("resourcetype == 'NourrissageHumide'")["given_quantity"].values
     )
 
 
