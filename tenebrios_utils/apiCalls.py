@@ -36,6 +36,17 @@ def put_action(inserted_data: dict, id: str):
     return response.status_code
 
 
+def delete_action(id: str):
+    response = requests.delete(f"{API_URL}/actions/{id}", auth=apiAuth.auth)
+    if response.status_code == 204:
+        print(f"DELETE request successful. Status Code: {response.status_code}")
+    else:
+        print(
+            f"DELETE request failed. Status Code: {response.status_code}. Response : {response.text}"
+        )
+    return response.status_code
+
+
 def get_action_by_id(action_id: str) -> dict:
     r = requests.get(f"{API_URL}/actions/{action_id}", auth=apiAuth.auth)
     if r.status_code != 200:

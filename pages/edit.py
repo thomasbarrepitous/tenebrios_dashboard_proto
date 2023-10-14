@@ -5,7 +5,10 @@ from tenebrios_utils import formatting, apiCalls
 from ui_components import common, edit
 from dash.exceptions import PreventUpdate
 
-dash.register_page(__name__, path_template="/tracability/action/<action_id>")
+dash.register_page(
+    __name__,
+    path_template="/tracability/action/<action_id>",
+)
 
 
 def display_edit_form(action: dict):
@@ -45,7 +48,8 @@ def display_layout():
             dcc.Store(id="api-action-store"),
             html.Div(id="edit-action-form"),
             common.send_form_button(),
-            common.refresh_page_button("Effacer"),
+            common.refresh_page_button("Reinitialiser"),
+            common.delete_form_button(href="/tracability"),
             html.Div(id="dummy-output"),
         ]
     )
@@ -132,6 +136,18 @@ def display_pesage_comment(value):
 @callback(Output("refresh_page_button", "href"), [Input("url", "pathname")])
 def refresh_page_button(relative_pathname):
     return relative_pathname
+
+
+@callback(
+    Output("dummy-output", "childre", allow_duplicate=True),
+    Input("delete-button", "n_clicks"),
+    State("url", "pathname"),
+    prevent_initial_call=True,
+)
+def delete_page_button(n_clicks, pathname):
+    if n_clicks > 0:
+        action_id = pathname.split("/")[-1]
+        apiCalls.delete_action(action_id)
 
 
 @callback(

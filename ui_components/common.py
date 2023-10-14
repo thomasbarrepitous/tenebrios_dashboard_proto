@@ -61,6 +61,22 @@ def clear_form_button(title: str = "Effacer"):
     )
 
 
+def delete_form_button(title: str = "Supprimer", href: str = "/"):
+    return dbc.Row(
+        dbc.Button(
+            title,
+            id="delete-button",
+            n_clicks=0,
+            type="button",
+            external_link=True,
+            href=href,
+            size="lg",
+            className="me-md-2",
+            color="danger",
+        ),
+    )
+
+
 def refresh_page_button(title: str = "Rafraichir"):
     return dbc.Row(
         # dcc.Link(
