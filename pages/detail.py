@@ -53,7 +53,12 @@ def action_item_component(action):
             dmc.AccordionControl(
                 f'{accordion_action_title} du {action_date.strftime("%B %d, %Y")}'
             ),
-            dmc.AccordionPanel(dmc.Table(header + body)),
+            dmc.AccordionPanel(
+                [
+                    dmc.Table(header + body),
+                    dbc.Button("Modifier", href=f"/tracability/action/{action['id']}"),
+                ]
+            ),
         ],
         value=action["date"],
     )
