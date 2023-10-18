@@ -603,8 +603,8 @@ def callback_send_post_request(
         for id, values in zip(input_ids, input_values):
             post_data[formatting.form_index_to_request_id(id["index"])] = values
         # POST request
-        # apiCalls.post_action(post_data)
-        # print(post_data)
+        apiCalls.post_action(post_data)
+        print(post_data)
     return ""
 
 

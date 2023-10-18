@@ -18,7 +18,7 @@ def display_edit_form_mec(action: dict):
             common.centered_title(
                 formatting.add_space_before_caps(action["resourcetype"])
             ),
-            edit.basic_edit_input(action["recolte_nb"], "Recolte number"),
+            # edit.basic_edit_input(action["recolte_nb"], "Recolte number"),
             edit.basic_edit_input(action["column"], "Column"),
             common.date_picker_form("Date", value=action["date"]),
         ],
