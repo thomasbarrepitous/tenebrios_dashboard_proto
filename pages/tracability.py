@@ -542,7 +542,6 @@ form_input_recolte = [
 form_input_mec = [
     display_centered_title("Mise en culture"),
     column_form,
-    recolte_nb_form,
     date_picker_form("Date"),
     send_form_button,
 ]
