@@ -4,11 +4,11 @@ import re
 
 
 def timestamp_to_readable_datetime(date: str) -> datetime:
-    return datetime.strptime(date, "%Y-%m-%dT%H:%M:%S.%fZ")
+    return datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ")
 
 
 def api_date_to_datetime(date: str) -> datetime:
-    return pd.to_datetime(date, format="%Y-%m-%dT%H:%M:%S.%fZ")
+    return pd.to_datetime(date, format="%Y-%m-%dT%H:%M:%SZ")
 
 
 def add_space_before_caps(str: str) -> str:
@@ -39,6 +39,13 @@ def form_index_to_request_id(form_index: str) -> str:
     elif form_index == "Qterécoltée":
         return "harvested_quantity"
     return form_index
+
+
+def format_post_data(post_data):
+    for id in post_data:
+        if id == "date":
+            post_data[id] = datetime.strptime(post_data.get(id), "%Y-%m-%d").isoformat()
+    return post_data
 
 
 def form_index_to_request_id_edit(form_index: str) -> str:

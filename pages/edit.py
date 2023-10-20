@@ -218,7 +218,6 @@ def delete_page_button(n_clicks, pathname):
     Input("api-action-store", "data"),
 )
 def render_action_form(action):
-    print(action)
     if action is None:
         raise PreventUpdate
     elif action["resourcetype"] == "NourrissageHumide":

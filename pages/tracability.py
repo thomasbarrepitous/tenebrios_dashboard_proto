@@ -42,7 +42,7 @@ def refresh_btn_toast(text: str):
 
 def latest_breeding_listgroup(df_column):
     # Change empty strings to pd.NaN
-    pd.options.mode.use_inf_as_na = True
+    df_column = df_column.replace(np.inf, np.nan)
     return dbc.ListGroup(
         [
             dbc.ListGroupItem(
@@ -92,9 +92,15 @@ def fetch_df_column(column):
     df = pd.DataFrame(apiCalls.get_column_actions(column))
     # Filter by the current column
     df_column = df.query(f'column == "{column}"')
-    # Only keep the latest breeding
-    date_mec = df_column.query('resourcetype == "MiseEnCulture"')["date"][0]
-    df_column = df_column[(df["date"] >= date_mec)]
+    # Only keep the latest mise en culture
+    date_mec = df_column.query('resourcetype == "MiseEnCulture"')["date"].iloc[-1]
+    last_action_date = df_column["date"].iloc[-1]
+    # Fetch actions between the latest mise en culture and the last action
+    df_column = df_column[
+        (df_column["date"] >= date_mec) & (df_column["date"] <= last_action_date)
+    ]
+    print(date_mec)
+    print(last_action_date)
     # Convert to right types
     df_column = df_columns_type_fix(df_column)
     return df_column
@@ -106,8 +112,11 @@ def modal_body(df_column):
     date_recolte = None
     harvested_qty = "Élevage en cours"
     if last_action["resourcetype"] == "Recolte":
-        date_recolte = last_action["date"]
+        date_recolte = last_action["date"].strftime("%B %d, %Y")
         harvested_qty = last_action["harvested_quantity"]
+    else:
+        date_recolte = "Élevage en cours"
+        harvested_qty = "Élevage en cours"
     date_mec = df_column.iloc[0]["date"]
     return dbc.ModalBody(
         [
@@ -118,16 +127,10 @@ def modal_body(df_column):
                     )
                 )
             ),
-            dbc.Row(
-                dbc.Col(
-                    html.P(
-                        f'Date de récolte : {date_recolte.strftime("%B %d, %Y") or "Élevage en cours"}'
-                    )
-                )
-            ),
+            dbc.Row(dbc.Col(html.P(f"Date de récolte : {date_recolte}"))),
             dbc.Row(
                 [
-                    dbc.Col(html.P(f"Poids récolte totale du lot :{harvested_qty}")),
+                    dbc.Col(html.P(f"Poids récolte totale du lot : {harvested_qty}")),
                     dbc.Col(html.P(f"Poids moyen par bac : {None}")),
                 ]
             ),
@@ -378,6 +381,7 @@ def date_picker_form(title: str):
                         "type": "date-data",
                         "index": f"{title.replace(' ', '').lower()}",
                     },
+                    display_format="Y-M-D",
                 )
             ),
         ],
@@ -601,9 +605,9 @@ def callback_send_post_request(
         input_values = date_values + input_values
         for id, values in zip(input_ids, input_values):
             post_data[formatting.form_index_to_request_id(id["index"])] = values
+        post_data = formatting.format_post_data(post_data)
         # POST request
         apiCalls.post_action(post_data)
-        print(post_data)
     return ""
 
 
