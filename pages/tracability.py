@@ -23,12 +23,13 @@ all_actions = apiCalls.get_all_actions()
 #########
 
 
-def refresh_btn_toast(text: str):
+def btn_toast(text: str, header: str = "Notification", index: str = "notification"):
     return dbc.Toast(
         text,
-        id="positioned-toast",
-        header="Notification",
+        id={"type": "positioned-toast", "index": index},
+        header=header,
         is_open=False,
+        # persistence=True,
         dismissable=True,
         icon="primary",
         style={"position": "fixed", "top": 66, "right": 10, "width": 350, "z-index": 1},
@@ -99,8 +100,6 @@ def fetch_df_column(column):
     df_column = df_column[
         (df_column["date"] >= date_mec) & (df_column["date"] <= last_action_date)
     ]
-    print(date_mec)
-    print(last_action_date)
     # Convert to right types
     df_column = df_columns_type_fix(df_column)
     return df_column
@@ -202,7 +201,7 @@ def filter_cycle(columns):
             dmc.MultiSelect(
                 label="Filtrer par colonne",
                 placeholder="Choisis une ou plusieurs colonne!",
-                id="framework-multi-select",
+                id="filter-column-multi-select",
                 value=[],
                 data=[
                     {"value": column["column"], "label": column["column"]}
@@ -483,14 +482,19 @@ pesage_marc_form = dbc.Row(
 
 
 send_form_button = dbc.Row(
-    dbc.Button(
-        "Confirmer",
-        id="submit-button",
-        n_clicks=0,
-        type="submit",
-        size="lg",
-        className="me-md-2",
-    ),
+    [
+        dbc.Button(
+            "Confirmer",
+            id="submit-button",
+            n_clicks=0,
+            # href="/tracability",
+            # external_link=True,
+            type="submit",
+            size="lg",
+            className="me-md-2",
+        ),
+        btn_toast("Data Submitted !", index="data-submit"),
+    ]
 )
 
 
@@ -554,7 +558,7 @@ form_input_mec = [
 dashboard = [
     display_centered_title("En Cours"),
     dmc.Button("Refresh", id="refresh-data-btn"),
-    refresh_btn_toast("Data Refreshed !"),
+    btn_toast("Data Refreshed !"),
     dbc.Spinner(html.Div(id="column-cards"), color="secondary", type="grow"),
     display_centered_title("Historique élevage"),
     dbc.Spinner(html.Div(id="historical-cycle"), color="secondary", type="grow"),
@@ -692,15 +696,17 @@ def toggle_modal_callback(n1, is_open):
     Output("display-cycle", "children"),
     Output("pagination-div", "children"),
     Input("pagination-cycle", "page"),
-    Input("framework-multi-select", "value"),
+    Input("filter-column-multi-select", "value"),
 )
 def select_value(current_page, filters):
     uri_filters = ""
+    # Create API URI filters
     if filters != []:
         uri_filters = "".join("column=" + filter + "&" for filter in filters)
     historical_harvests = apiCalls.get_all_recolte_paginated(
         uri_filters, current_page, CYCLE_PAGE_SIZE
     )
+    print(historical_harvests)
     return [
         [
             display_cycle(harvest["recolte_nb"])
@@ -726,8 +732,27 @@ def populate_historical_cycle(n_clicks):
     )
 
 
-@callback(Output("positioned-toast", "is_open"), Input("refresh-data-btn", "n_clicks"))
+@callback(
+    Output({"type": "positioned-toast", "index": "notification"}, "is_open"),
+    Input("refresh-data-btn", "n_clicks"),
+)
 def refresh_data(n_clicks):
+    if n_clicks:
+        return True
+    return False
+
+
+@callback(
+    Output({"type": "positioned-toast", "index": "data-submit"}, "is_open"),
+    Input("submit-button", "n_clicks"),
+)
+def submit_data_toast_display(n_clicks):
+    if n_clicks:
+        return True
+    return False
+
+
+def disable_btn_after_submit(n_clicks):
     if n_clicks:
         return True
     return False
