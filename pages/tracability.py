@@ -493,6 +493,7 @@ send_form_button = dbc.Row(
             className="me-md-2",
         ),
         btn_toast("Data Submitted !", index="data-submit"),
+        btn_toast("Error !", index="error-submit"),
     ]
 )
 
@@ -594,6 +595,7 @@ layout = dbc.Container(
 @callback(
     Output("output", "children"),
     Output({"type": "positioned-toast", "index": "data-submit"}, "is_open"),
+    Output({"type": "positioned-toast", "index": "error-submit"}, "is_open"),
     Input("submit-button", "n_clicks"),
     State({"type": "input-data", "index": ALL}, "id"),
     State({"type": "input-data", "index": ALL}, "value"),
@@ -604,17 +606,21 @@ layout = dbc.Container(
 def callback_send_post_request(
     n_clicks, input_ids, input_values, date_ids, date_values
 ):
-    if n_clicks and None not in input_values:
-        post_data: dict = {}
-        input_ids = date_ids + input_ids
-        input_values = date_values + input_values
-        for id, values in zip(input_ids, input_values):
-            post_data[formatting.form_index_to_request_id(id["index"])] = values
-        post_data = formatting.format_post_data(post_data)
-        # POST request
-        apiCalls.post_action(post_data)
-        return "", True
-    return "", False
+    if n_clicks:
+        if None not in input_values:
+            post_data: dict = {}
+            input_ids = date_ids + input_ids
+            input_values = date_values + input_values
+            for id, values in zip(input_ids, input_values):
+                post_data[formatting.form_index_to_request_id(id["index"])] = values
+            post_data = formatting.format_post_data(post_data)
+            # POST request
+            apiCalls.post_action(post_data)
+            return "", True, False
+        # If btn clicked but error, error norification
+        return "", False, True
+    # If btn not clicked no notification
+    return "", False, False
 
 
 @callback(
