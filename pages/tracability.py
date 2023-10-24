@@ -9,7 +9,6 @@ import math
 from tenebrios_utils import apiCalls, formatting
 from ui_components import common
 
-
 dash.register_page(__name__)
 
 
@@ -594,16 +593,18 @@ layout = dbc.Container(
 
 @callback(
     Output("output", "children"),
+    Output({"type": "positioned-toast", "index": "data-submit"}, "is_open"),
     Input("submit-button", "n_clicks"),
     State({"type": "input-data", "index": ALL}, "id"),
     State({"type": "input-data", "index": ALL}, "value"),
     State({"type": "date-data", "index": ALL}, "id"),
     State({"type": "date-data", "index": ALL}, "date"),
+    prevent_initial_call=True,
 )
 def callback_send_post_request(
     n_clicks, input_ids, input_values, date_ids, date_values
 ):
-    if n_clicks:
+    if n_clicks and None not in input_values:
         post_data: dict = {}
         input_ids = date_ids + input_ids
         input_values = date_values + input_values
@@ -612,7 +613,8 @@ def callback_send_post_request(
         post_data = formatting.format_post_data(post_data)
         # POST request
         apiCalls.post_action(post_data)
-    return ""
+        return "", True
+    return "", False
 
 
 @callback(
@@ -706,7 +708,6 @@ def select_value(current_page, filters):
     historical_harvests = apiCalls.get_all_recolte_paginated(
         uri_filters, current_page, CYCLE_PAGE_SIZE
     )
-    print(historical_harvests)
     return [
         [
             display_cycle(harvest["recolte_nb"])
@@ -737,22 +738,6 @@ def populate_historical_cycle(n_clicks):
     Input("refresh-data-btn", "n_clicks"),
 )
 def refresh_data(n_clicks):
-    if n_clicks:
-        return True
-    return False
-
-
-@callback(
-    Output({"type": "positioned-toast", "index": "data-submit"}, "is_open"),
-    Input("submit-button", "n_clicks"),
-)
-def submit_data_toast_display(n_clicks):
-    if n_clicks:
-        return True
-    return False
-
-
-def disable_btn_after_submit(n_clicks):
     if n_clicks:
         return True
     return False
