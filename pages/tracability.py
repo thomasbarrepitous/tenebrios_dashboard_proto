@@ -240,7 +240,7 @@ def display_cycle(recolte_nb: str):
         ),
         width={"size": 6, "offset": 3},
         className="text-center",
-    )
+    ) if len(harvest_cycle)>1 else None
 
 
 def display_historical_cycle(columns):
@@ -486,8 +486,6 @@ send_form_button = dbc.Row(
             "Confirmer",
             id="submit-button",
             n_clicks=0,
-            # href="/tracability",
-            # external_link=True,
             type="submit",
             size="lg",
             className="me-md-2",
@@ -607,6 +605,8 @@ def callback_send_post_request(
     n_clicks, input_ids, input_values, date_ids, date_values
 ):
     if n_clicks:
+        print(input_ids)
+        print(input_values)
         if None not in input_values:
             post_data: dict = {}
             input_ids = date_ids + input_ids
@@ -614,6 +614,12 @@ def callback_send_post_request(
             for id, values in zip(input_ids, input_values):
                 post_data[formatting.form_index_to_request_id(id["index"])] = values
             post_data = formatting.format_post_data(post_data)
+            # Check if MiseEnCulture is inputted before a Recolte
+            print(post_data)
+            if post_data["resourcetype"] == "MiseEnCulture":
+                last_column_action = apiCalls.get_column_actions(post_data["column"])[-1]
+                if last_column_action["resourcetype"] != "Recolte":
+                    return "", False, True
             # POST request
             apiCalls.post_action(post_data)
             return "", True, False
@@ -710,9 +716,9 @@ def select_value(current_page, filters):
     uri_filters = ""
     # Create API URI filters
     if filters != []:
-        uri_filters = "".join("column=" + filter + "&" for filter in filters)
+        uri_filters = "".join("column=" + filters[0])
     historical_harvests = apiCalls.get_all_recolte_paginated(
-        uri_filters, current_page, CYCLE_PAGE_SIZE
+            uri_filters, current_page, CYCLE_PAGE_SIZE
     )
     return [
         [
@@ -720,7 +726,7 @@ def select_value(current_page, filters):
             for harvest in historical_harvests["results"]
         ],
         display_pagination_cycle(
-            current_page, math.ceil(historical_harvests["count"] / CYCLE_PAGE_SIZE)
+            current_page, math.floor(historical_harvests["count"] / CYCLE_PAGE_SIZE)
         ),
     ]
 
