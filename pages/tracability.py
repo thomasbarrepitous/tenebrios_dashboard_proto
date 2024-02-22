@@ -79,11 +79,17 @@ def latest_breeding_listgroup(df_column):
 
 
 def df_columns_type_fix(df_column):
-    df_column["anomaly"] = df_column["anomaly"].astype("boolean")
-    df_column["is_imw100_weighted"] = df_column["is_imw100_weighted"].astype("boolean")
-    df_column["son_arrival_date"] = pd.to_datetime(df_column["son_arrival_date"])
-    df_column["marc_arrival_date"] = pd.to_datetime(df_column["marc_arrival_date"])
-    df_column["date"] = pd.to_datetime(df_column["date"])
+    pd.options.mode.chained_assignment = None
+    if "anomaly" in df_column:
+        df_column["anomaly"] = df_column["anomaly"].astype("boolean")
+    if "is_imw100_weighted" in df_column:
+        df_column["is_imw100_weighted"] = df_column["is_imw100_weighted"].astype("boolean")
+    if "son_arrival_date" in df_column:
+        df_column["son_arrival_date"] = pd.to_datetime(df_column["son_arrival_date"])
+    if "marc_arrival_date" in df_column:
+        df_column["marc_arrival_date"] = pd.to_datetime(df_column["marc_arrival_date"])
+    if "date" in df_column:
+        df_column["date"] = pd.to_datetime(df_column["date"])
     df_column = df_column.replace("", np.nan)
     return df_column
 
@@ -605,8 +611,6 @@ def callback_send_post_request(
     n_clicks, input_ids, input_values, date_ids, date_values
 ):
     if n_clicks:
-        print(input_ids)
-        print(input_values)
         if None not in input_values:
             post_data: dict = {}
             input_ids = date_ids + input_ids
@@ -615,10 +619,18 @@ def callback_send_post_request(
                 post_data[formatting.form_index_to_request_id(id["index"])] = values
             post_data = formatting.format_post_data(post_data)
             # Check if MiseEnCulture is inputted before a Recolte
-            print(post_data)
             if post_data["resourcetype"] == "MiseEnCulture":
-                last_column_action = apiCalls.get_column_actions(post_data["column"])[-1]
-                if last_column_action["resourcetype"] != "Recolte":
+                last_column_action = apiCalls.get_column_actions(post_data["column"])
+                # If the column didnt exist before, create it
+                if last_column_action:
+                    last_action = last_column_action[-1]
+                    if last_action["resourcetype"] != "Recolte":
+                        return "", False, True
+            # Check that there is at least one MiseEnCulture in the column
+            else:
+                last_column_action = apiCalls.get_column_actions(post_data["column"])
+                print(last_column_action)
+                if not any(item.get("resourcetype") == "MiseEnCulture" for item in last_column_action):
                     return "", False, True
             # POST request
             apiCalls.post_action(post_data)
@@ -717,6 +729,7 @@ def select_value(current_page, filters):
     # Create API URI filters
     if filters != []:
         uri_filters = "".join("column=" + filters[0])
+        current_page - 0
     historical_harvests = apiCalls.get_all_recolte_paginated(
             uri_filters, current_page, CYCLE_PAGE_SIZE
     )
@@ -738,6 +751,7 @@ def select_value(current_page, filters):
     Input("refresh-data-btn", "n_clicks"),
 )
 def populate_historical_cycle(n_clicks):
+    print(all_actions)
     return (
         display_historical_cycle(all_columns),
         display_column_cards(all_columns),

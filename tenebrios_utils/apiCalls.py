@@ -4,7 +4,8 @@ from tenebrios_utils import apiAuth
 import pandas as pd
 
 
-API_URL = f"http://127.0.0.1:8000/api"
+# API_URL = f"http://127.0.0.1:8050/api"
+API_URL = f"http://api:3000/api"
 
 
 ###################
@@ -14,6 +15,7 @@ API_URL = f"http://127.0.0.1:8000/api"
 
 def post_action(post_data: dict):
     response = requests.post(f"{API_URL}/actions", data=post_data, auth=apiAuth.auth)
+    print(response.status_code)
     if response.status_code == 201:
         print(f"POST request successful. Response: {response.text}")
     else:

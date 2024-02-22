@@ -9,7 +9,8 @@ from tenebrios_utils import formatting, apiCalls, dfActions
 dash.register_page(__name__, path_template="/tracability/recolte/<recolte_nb>")
 
 
-API_URL = f"http://127.0.0.1:8000/api/actions"
+# API_URL = f"http://127.0.0.1:8000/api/actions"
+API_URL = f"http://api:3000/api/actions"
 
 
 def layout(recolte_nb=None):
